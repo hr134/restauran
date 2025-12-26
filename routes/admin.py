@@ -241,7 +241,7 @@ def orders_data():
             'id': o.id,
             'unique_order_number': o.unique_order_number,
             'status': o.status,
-            'total': o.total_price,
+            'total': o.total,
             'customer': o.user.full_name if o.user else 'Guest',
             'username': o.user.username if o.user else 'guest',
             'created_at': o.created_at.strftime('%Y-%m-%d %H:%M'),
