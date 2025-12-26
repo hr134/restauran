@@ -1,0 +1,146 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block admin_title %}Inventory & Stock Management{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('form[action*="/inventory/update/"]').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const action = this.getAttribute('action');
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.innerHTML;
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                fetch(action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        handleAjaxResponse(data, () => {
+                            // Update the UI dynamically
+                            const row = this.closest('tr');
+                            const stockVal = formData.get('stock_quantity');
+                            const thresholdVal = formData.get('low_stock_threshold');
+
+                            const stockSpan = row.querySelector('td:nth-child(3) span');
+                            if (stockSpan) stockSpan.textContent = stockVal;
+
+                            if (parseInt(stockVal) <= parseInt(thresholdVal)) {
+                                if (stockSpan) stockSpan.classList.add('text-danger');
+                            } else {
+                                if (stockSpan) stockSpan.classList.remove('text-danger');
+                            }
+
+                            // Update Badge
+                            const badgeTd = row.querySelector('td:nth-child(5)');
+                            if (badgeTd) {
+                                if (parseInt(stockVal) <= 0) {
+                                    badgeTd.innerHTML = '<span class="badge bg-danger">Out of Stock</span>';
+                                } else if (parseInt(stockVal) <= parseInt(thresholdVal)) {
+                                    badgeTd.innerHTML = '<span class="badge bg-warning text-dark">Low Stock</span>';
+                                } else {
+                                    badgeTd.innerHTML = '<span class="badge bg-success">In Stock</span>';
+                                }
+                            }
+                        });
+                    })
+                    .catch(err => showNotification('Network error', 'danger'))
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    });
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="glass-card shadow-lg p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Current Stock Levels</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle admin-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Current Stock</th>
+                            <th>Low Threshold</th>
+                            <th>Status</th>
+                            <th>Quick Update</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if item.image %}
+                                    <img src="{{ url_for('static', filename='uploads/' + item.image) }}"
+                                        class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-secondary rounded me-2 d-flex align-items-center justify-content-center"
+                                        style="width: 40px; height: 40px;">
+                                        <i class="bi bi-image text-white"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold">{{ item.name }}</div>
+                                        <small class="text-id">ID: #{{ item.id }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-secondary text-white border border-secondary">{{ item.category
+                                    }}</span></td>
+                            <td>
+                                <span
+                                    class="fw-bold {% if item.stock_quantity <= item.low_stock_threshold %}text-danger{% endif %}">
+                                    {{ item.stock_quantity }}
+                                </span>
+                            </td>
+                            <td>{{ item.low_stock_threshold }}</td>
+                            <td>
+                                {% if item.stock_quantity <= 0 %} <span class="badge bg-danger">Out of Stock</span>
+                                    {% elif item.stock_quantity <= item.low_stock_threshold %} <span
+                                        class="badge bg-warning text-dark">Low Stock</span>
+                                        {% else %}
+                                        <span class="badge bg-success">In Stock</span>
+                                        {% endif %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('admin.update_stock', item_id=item.id) }}" method="POST"
+                                    class="d-flex gap-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="number" name="stock_quantity" class="form-control form-control-sm"
+                                        value="{{ item.stock_quantity }}" style="width: 80px;" required>
+                                    <input type="hidden" name="low_stock_threshold"
+                                        value="{{ item.low_stock_threshold }}">
+                                    <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

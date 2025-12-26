@@ -1,0 +1,137 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}Manager Attendance{% endblock %}
+
+{% block manager_title %}Attendance{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="glass-card p-4">
+        <h2 class="mb-4 text-white">📅 Team Attendance</h2>
+
+        <!-- Identical functionality to Admin but extending Manager Base -->
+        <div class="card mb-4 bg-dark border-secondary">
+            <div class="card-body">
+                <form class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input type="date" name="date" class="form-control bg-light text-dark border-secondary"
+                                value="{{ selected_date.strftime('%Y-%m-%d') }}" onchange="this.form.submit()">
+                            <a href="{{ url_for('employees.attendance') }}" class="btn btn-primary"
+                                title="Go to Today">Today</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-dark table-hover custom-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    {% set record = attendance_records.get(employee.id) %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-white">{{ employee.user.full_name or employee.user.username }}
+                            </div>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ employee.user.role|capitalize }}</span></td>
+                        <td>
+                            {% if record %}
+                            <span class="badge 
+                                    {% if record.status == 'present' %}bg-success
+                                    {% elif record.status == 'absent' %}bg-danger
+                                    {% elif record.status == 'leave' %}bg-warning
+                                    {% else %}bg-info{% endif %}">
+                                {{ record.status|capitalize }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">Not Marked</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.notes if record else '-' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary mark-attendance-btn"
+                                data-employee-id="{{ employee.id }}"
+                                data-fullname="{{ employee.user.full_name or employee.user.username }}"
+                                data-status="{{ record.status if record else '' }}"
+                                data-notes="{{ record.notes if record else '' }}">
+                                {% if record %}Update{% else %}Mark{% endif %}
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Same as Admin -->
+<div class="modal fade" id="attendanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Mark Attendance</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('employees.mark_attendance') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="employee_id" id="employee_id">
+                    <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+
+                    <p class="mb-3">Employee: <strong id="employee_name"></strong></p>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Status</label>
+                        <select name="status" id="status" class="form-select bg-dark text-light border-secondary">
+                            <option value="present">Present</option>
+                            <option value="absent">Absent</option>
+                            <option value="late">Late</option>
+                            <option value="leave">On Leave</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Notes</label>
+                        <textarea name="notes" id="notes" class="form-control bg-dark text-light border-secondary"
+                            rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Attendance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.mark-attendance-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const data = this.dataset;
+            markAttendance(data.employeeId, data.fullname, data.status, data.notes);
+        });
+    });
+
+    function markAttendance(employeeId, fullName, currentStatus, currentNotes) {
+        document.getElementById('employee_id').value = employeeId;
+        document.getElementById('employee_name').textContent = fullName;
+        document.getElementById('status').value = currentStatus || 'present';
+        document.getElementById('notes').value = currentNotes || '';
+
+        new bootstrap.Modal(document.getElementById('attendanceModal')).show();
+    }
+</script>
+{% endblock %}

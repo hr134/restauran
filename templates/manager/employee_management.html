@@ -1,0 +1,331 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}Employee Management - Manager{% endblock %}
+
+{% block manager_title %}Employee Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">👔 Employee Management</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="bi bi-person-plus-fill me-2"></i>Request Promotion
+        </button>
+    </div>
+
+    <!-- Managers see their pending requests -->
+    {% if pending_requests %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-info-circle-fill me-2"></i>
+            You have <strong>{{ pending_requests|length }}</strong> request(s) awaiting Admin approval.
+        </div>
+        <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#viewRequestsModal">
+            View Details
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="glass-card p-4">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover custom-table">
+                <thead>
+                    <tr>
+                        <th>Staff</th>
+                        <th>Role</th>
+                        <th>Position</th>
+                        <th>Dept</th>
+                        <th>Hired</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-white">{{ employee.user.username }}</div>
+                            <div class="small text-muted">{{ employee.user.full_name or '' }}</div>
+                        </td>
+                        <td><span class="badge bg-info text-dark">{{ employee.user.role|capitalize }}</span></td>
+                        <td>{{ employee.position }}</td>
+                        <td>{{ employee.department or '-' }}</td>
+                        <td>{{ employee.hire_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if employee.status == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                            {% elif employee.status == 'on_leave' %}
+                            <span class="badge bg-warning text-dark">On Leave</span>
+                            {% else %}
+                            <span class="badge bg-danger">Terminated</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-warning edit-employee-btn" data-id="{{ employee.id }}"
+                                data-position="{{ employee.position }}"
+                                data-department="{{ employee.department or '' }}"
+                                data-salary="{{ employee.salary or 0 }}"
+                                data-hire="{{ employee.hire_date.strftime('%Y-%m-%d') }}"
+                                data-status="{{ employee.status }}">
+                                Update Status
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- View Pending Requests Modal -->
+<div class="modal fade" id="viewRequestsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Pending Pending Requests</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-sm">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Details</th>
+                                <th>Requested</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in pending_requests %}
+                            <tr>
+                                <td>
+                                    {% if req.request_type == 'promotion' %}
+                                    <span class="badge bg-primary">Promotion</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">Status Change</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        {% if req.request_type == 'promotion' %}
+                                        <strong>For:</strong> {{ req.user.full_name or req.user.username }}<br>
+                                        <strong>Pos:</strong> {{ req.position }} ({{ req.department }})
+                                        {% else %}
+                                        <strong>For:</strong> {{ req.user.full_name or req.user.username }}<br>
+                                        <strong>Change:</strong> {{ req.current_status }} &rarr; {{ req.requested_status
+                                        }}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="small">{{ req.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td><span class="badge bg-secondary">Pending</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request Promotion Modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Request New Staff Promotion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('employees.add_employee') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="alert alert-secondary small">
+                        This will submit a request to the Admin for approval.
+                        Please select a qualified user below.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Search User</label>
+                        <input type="text" id="userSearchInput"
+                            class="form-control bg-dark text-light border-secondary mb-2"
+                            placeholder="Search by Name, Username or Customer ID...">
+
+                        <label class="form-label text-muted small">Select User</label>
+                        <select name="user_id" class="form-select bg-dark text-light border-secondary" required>
+                            <option value="" selected disabled>Start typing to search...</option>
+                        </select>
+                        <div class="form-text text-muted small">Only non-staff users appear here.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Proposed Role / Position</label>
+                            <select name="position" class="form-select bg-dark text-light border-secondary" required>
+                                <option value="chef">Chef</option>
+                                <option value="waiter">Waiter</option>
+                                <option value="admin">Admin</option>
+                                <option value="manager">Manager</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Department</label>
+                            <select name="department" class="form-select bg-dark text-light border-secondary">
+                                <option value="Kitchen">Kitchen</option>
+                                <option value="Service">Service</option>
+                                <option value="Management">Management</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Proposed Salary</label>
+                            <input type="number" step="0.01" name="salary"
+                                class="form-control bg-dark text-light border-secondary" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Hire Date</label>
+                            <input type="date" name="hire_date" class="form-control bg-dark text-light border-secondary"
+                                value="{{ now().strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Request Status Change Modal -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Request Status Change</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editEmployeeForm" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="edit_employee_id">
+
+                    <div class="alert alert-warning small">
+                        Note: Managers can only request status changes (e.g., Termination, Leave). Other details must be
+                        updated by Admin.
+                    </div>
+
+                    <!-- Read-only fields for context -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Current Position</label>
+                            <input type="text" id="edit_position"
+                                class="form-control bg-dark text-light border-secondary" disabled>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Current Dept</label>
+                            <input type="text" id="edit_department"
+                                class="form-control bg-dark text-light border-secondary" disabled>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">New Status Request</label>
+                        <select id="edit_status" name="status" class="form-select bg-dark text-light border-secondary">
+                            <option value="active">Active</option>
+                            <option value="on_leave">On Leave</option>
+                            <option value="terminated">Terminated</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-warning">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Manager Scripts
+    const addModal = document.getElementById('addEmployeeModal');
+    if (addModal) {
+        const searchInput = document.getElementById('userSearchInput');
+        let debounceTimer;
+
+        // Function to perform search
+        const performSearch = (query) => {
+            const select = addModal.querySelector('select[name="user_id"]');
+
+            // If query is empty, clear or show default
+            if (!query) {
+                select.innerHTML = '<option value="" selected disabled>Start typing to search...</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="" disabled>Searching...</option>';
+
+            fetch(`{{ url_for('employees.users_search') }}?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.users && data.users.length > 0) {
+                        select.innerHTML = '<option value="" selected disabled>Select a user...</option>';
+                        data.users.forEach(u => {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            // Display format: Name (@Username) - ID: MemberID
+                            const memberId = u.member_id ? ` [ID: ${u.member_id}]` : '';
+                            opt.textContent = `${u.full_name || u.username} (@${u.username})${memberId}`;
+                            select.appendChild(opt);
+                        });
+                    } else {
+                        select.innerHTML = '<option value="" disabled>No match found</option>';
+                    }
+                })
+                .catch(err => {
+                    select.innerHTML = '<option value="" disabled>Error searching users</option>';
+                });
+        };
+
+        // Listen for input
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    performSearch(this.value.trim());
+                }, 300); // 300ms debounce
+            });
+        }
+
+        // Focus search on open
+        addModal.addEventListener('shown.bs.modal', function () {
+            if (searchInput) searchInput.focus();
+        });
+    }
+
+    document.querySelectorAll('.edit-employee-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const data = this.dataset;
+            // Managers only update status, but we fill read-only for context
+            document.getElementById('edit_employee_id').value = data.id;
+            document.getElementById('edit_position').value = data.position;
+            document.getElementById('edit_department').value = data.department;
+            document.getElementById('edit_status').value = data.status;
+
+            const form = document.getElementById('editEmployeeForm');
+            form.action = `/employees/edit/${data.id}`;
+
+            new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+        });
+    });
+</script>
+{% endblock %}
