@@ -7,7 +7,7 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/api/dashboard/stats')
 def dashboard_stats():
     # 1. Pending Orders
-    orders_count = Order.query.filter(Order.status.in_(['Placed', 'Pending'])).count()
+    orders_count = Order.query.filter(Order.status.in_(['Placed', 'Pending', 'Paid'])).count()
     
     # 2. Pending Reservations
     reservations_count = Reservation.query.filter_by(status='Pending').count()
