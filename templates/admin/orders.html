@@ -64,6 +64,7 @@
                         <span class="badge-admin 
                             {% if o.status == 'Confirmed' %}badge-admin-success
                             {% elif o.status == 'Paid' %}badge-admin-info
+                            {% elif o.status in ['Preparing', 'Ready', 'Delivered'] %}badge-admin-primary
                             {% else %}badge-admin-warning{% endif %}">
                             {{ o.status }}
                         </span>
@@ -252,7 +253,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         attachConfirmListeners();
 
-        startPolling('{{ url_for("admin.orders_data") }}', 15000, (data) => {
+        startPolling('{{ url_for("admin.orders_data") }}', 5000, (data) => {
             const tbody = document.querySelector('.admin-table tbody');
             if (!data.orders || data.orders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-stylish">No orders found.</td></tr>';
@@ -261,9 +262,29 @@
 
             let html = '';
             data.orders.forEach((order, index) => {
-                const statusClass = order.status === 'Confirmed' ? 'badge-admin-success' : (order.status === 'Paid' ? 'badge-admin-info' : 'badge-admin-warning');
+                // Blueish badge for statuses set by other actors (chef/waiter)
+                let statusClass;
+                if (order.status === 'Confirmed') {
+                    statusClass = 'badge-admin-success';
+                } else if (order.status === 'Paid') {
+                    statusClass = 'badge-admin-info';
+                } else if (['Preparing', 'Ready', 'Delivered'].includes(order.status)) {
+                    statusClass = 'badge-admin-primary'; // Blueish for chef/waiter updates
+                } else {
+                    statusClass = 'badge-admin-warning';
+                }
+
                 const actionBtn = (order.status === 'Placed' || order.status === 'Pending' || order.status === 'Paid') ?
                     `<a class="btn btn-sm btn-success action-confirm" href="/admin/order/confirm/${order.id}"><i class="bi bi-check-circle"></i> Confirm</a>` : '';
+
+                // Display items from the API
+                let itemsText = 'No items';
+                if (order.items && order.items.length > 0) {
+                    itemsText = order.items.map(i => `${i.name} x${i.qty}`).join(', ');
+                    if (itemsText.length > 50) {
+                        itemsText = itemsText.substring(0, 47) + '...';
+                    }
+                }
 
                 html += `
                     <tr id="order-row-${order.id}">
@@ -280,7 +301,7 @@
                                 @${order.username}
                             </a>
                         </td>
-                        <td><small class="text-stylish">Multiple Items</small></td>
+                        <td><small class="text-stylish">${itemsText}</small></td>
                         <td><span class="text-white fw-bold">$${order.total.toFixed(2)}</span></td>
                         <td><span class="badge-admin ${statusClass}">${order.status}</span></td>
                         <td><small class="text-stylish">${order.created_at}</small></td>

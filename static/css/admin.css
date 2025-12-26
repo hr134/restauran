@@ -244,6 +244,11 @@ body.admin-body {
     color: #17a2b8;
 }
 
+.badge-admin-primary {
+    background: rgba(99, 102, 241, 0.15);
+    color: #6366f1;
+}
+
 /* Custom Inputs */
 .admin-input {
     background: var(--input-bg);

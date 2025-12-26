@@ -200,7 +200,7 @@
         attachResListeners();
         initModals();
 
-        startPolling('{{ url_for("admin.reservations_data") }}', 20000, (data) => {
+        startPolling('{{ url_for("admin.reservations_data") }}', 5000, (data) => {
             const tbody = document.querySelector('.admin-table tbody');
             if (!data.reservations || data.reservations.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-stylish">No reservations found.</td></tr>';

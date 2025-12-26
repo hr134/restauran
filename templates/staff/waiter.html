@@ -169,8 +169,8 @@
         }
     }
 
-    // Start polling every 10 seconds
-    startPolling('{{ url_for("staff.waiter_data") }}', 10000, (data) => {
+    // Start polling every 5 seconds for faster real-time updates
+    startPolling('{{ url_for("staff.waiter_data") }}', 5000, (data) => {
         refreshDashboard(data);
     });
 </script>

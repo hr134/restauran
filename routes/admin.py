@@ -244,7 +244,8 @@ def orders_data():
             'total': o.total_price,
             'customer': o.user.full_name if o.user else 'Guest',
             'username': o.user.username if o.user else 'guest',
-            'created_at': o.created_at.strftime('%Y-%m-%d %H:%M')
+            'created_at': o.created_at.strftime('%Y-%m-%d %H:%M'),
+            'items': items
         })
     return jsonify({'orders': orders_json})
 
@@ -390,7 +391,7 @@ def cancel_reservation(res_id):
             'success': True,
             'message': msg,
             'email': user.email if user else None,
-            'email_status': True if (user and user.email) else False
+            'email_status': email_status
         })
     return redirect(request.referrer or url_for('admin.index'))
 
@@ -404,10 +405,16 @@ def confirm_reservation(res_id):
 
     msg = 'Reservation confirmed.'
     user = User.query.get(res.user_id)
+    email_status = False
     if user and user.email:
-        send_email("Reservation Confirmed", user.email,
+        email_status = send_email("Reservation Confirmed", user.email,
                    f"Hello {user.full_name},\n\nYour reservation for Table {res.table_no} on {res.date} at {res.time} has been CONFIRMED.\n\nWe look forward to hosting you!\n\nRegards,\nRestaurant Team")
-        msg += f' Notification sent to {user.email}.'
+        if email_status:
+            msg += f' Notification sent to {user.email}.'
+        elif email_status == 'pending':
+            msg += f' Notification queued for {user.email}.'
+        else:
+            msg += f' (Note: Could not send email to {user.email})'
 
     flash(msg, 'success')
     
@@ -416,7 +423,7 @@ def confirm_reservation(res_id):
             'success': True,
             'message': msg,
             'email': user.email if user else None,
-            'email_status': True if (user and user.email) else False
+            'email_status': email_status
         })
     return redirect(request.referrer or url_for('admin.index'))
 
