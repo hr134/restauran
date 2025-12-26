@@ -12,9 +12,13 @@ def dashboard_stats():
     # 2. Pending Reservations
     reservations_count = Reservation.query.filter_by(status='Pending').count()
     
-    # 3. Out of Stock (Availability=False or Stock=0)
+    # 3. Inventory Alerts (Stock <= Low Stock Threshold or Stock=0)
+    # We only care about actual stock levels, not manual availability toggles.
     out_of_stock_count = MenuItem.query.filter(
-        db.or_(MenuItem.availability == False, MenuItem.stock_quantity <= 0)
+        db.or_(
+            MenuItem.stock_quantity <= 0,
+            MenuItem.stock_quantity <= MenuItem.low_stock_threshold
+        )
     ).count()
     
     # 4. Pending Employee Requests

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.utils import secure_filename
 from services.auth import role_required
 from services.email import send_email, format_order_body
-from extensions import db
+from extensions import db, cache
 from models.models import User, MenuItem, Order, Reservation, StaffShift, Rating, ReportLog, Employee, EmployeeRequest, Attendance
 import os
 import json
@@ -107,6 +107,7 @@ def add_menu():
             low_stock_threshold=low_stock_threshold
         )
         db.session.add(mi); db.session.commit()
+        cache.clear() # Clear cache so users see new item immediately
         flash('Menu item added.', 'success')
         return redirect(url_for('admin.index'))
     return render_template('admin/add_menu.html')
@@ -133,6 +134,7 @@ def edit_menu(item_id):
             mi.image = filename
 
         db.session.commit()
+        cache.clear() # Clear cache so update appears immediately
         flash('Menu item updated.', 'success')
         return redirect(url_for('admin.index'))
     return render_template('admin/edit_menu.html', item=mi)
@@ -149,6 +151,7 @@ def delete_menu(item_id):
         except:
             pass
     db.session.delete(mi); db.session.commit()
+    cache.clear() # Clear cache
     flash('Menu item deleted.', 'success')
     return redirect(url_for('admin.index'))
 
