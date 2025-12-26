@@ -45,9 +45,9 @@ def chef_data():
 @staff_bp.route('/waiter')
 @role_required('waiter', 'admin')
 def waiter():
-    # Show pending and confirmed reservations for today
+    # Show upcoming reservations sorted by date then time
     today = datetime.now(pytz.timezone('Asia/Dhaka')).strftime('%Y-%m-%d')
-    reservations = Reservation.query.filter(Reservation.date >= today).order_by(Reservation.time.asc()).all()
+    reservations = Reservation.query.filter(Reservation.date >= today).order_by(Reservation.date.asc(), Reservation.time.asc()).all()
     # Also show active orders for dine-in
     orders = Order.query.filter(Order.order_type == 'dine_in', Order.status != 'Delivered').all()
     return render_template('staff/waiter.html', reservations=reservations, orders=orders)
@@ -56,7 +56,7 @@ def waiter():
 @role_required('waiter', 'admin')
 def waiter_data():
     today = datetime.now(pytz.timezone('Asia/Dhaka')).strftime('%Y-%m-%d')
-    reservations = Reservation.query.filter(Reservation.date >= today).order_by(Reservation.time.asc()).all()
+    reservations = Reservation.query.filter(Reservation.date >= today).order_by(Reservation.date.asc(), Reservation.time.asc()).all()
     orders = Order.query.filter(Order.order_type == 'dine_in', Order.status == 'Ready').all()
     
     res_list = [{
