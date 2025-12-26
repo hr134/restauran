@@ -5,9 +5,6 @@ __pycache__/
 .Python
 env/
 venv/
-instance/
-.pytest_cache/
-.vscode/
-.idea/
-*.db
+# instance/  <-- Commented out to allow DB tracking
+# *.db       <-- Commented out to allow DB tracking
 *.log
