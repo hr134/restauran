@@ -142,12 +142,14 @@
 
           {% if session.get('role') in ['chef', 'admin'] or session.get('is_admin') %}
           <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('staff.chef') }}"><i
-                class="bi bi-fire"></i> Chef</a></li>
+                class="bi bi-fire"></i> Chef <span id="chef-count" class="badge bg-danger rounded-pill"
+                style="display: none;">0</span></a></li>
           {% endif %}
 
           {% if session.get('role') in ['waiter', 'admin'] or session.get('is_admin') %}
           <li class="nav-item"><a class="nav-link text-info" href="{{ url_for('staff.waiter') }}"><i
-                class="bi bi-person-badge"></i> Waiter</a></li>
+                class="bi bi-person-badge"></i> Waiter <span id="waiter-count" class="badge bg-danger rounded-pill"
+                style="display: none;">0</span></a></li>
           {% endif %}
 
           <li class="nav-item"><span class="nav-link disabled">Hi, {{ session.get('username') }}</span></li>
@@ -796,6 +798,77 @@
         }
       }
     });
+
+    // Staff Notification Polling (for navbar badges)
+    {% if session.get('role') in ['chef', 'waiter', 'admin'] or session.get('is_admin') %}
+    (function () {
+      const STAFF_COUNTS_KEY = 'staff_notification_counts';
+
+      function getStoredCounts() {
+        try {
+          return JSON.parse(localStorage.getItem(STAFF_COUNTS_KEY)) || { chef_count: 0, waiter_count: 0 };
+        } catch { return { chef_count: 0, waiter_count: 0 }; }
+      }
+
+      function setStoredCounts(counts) {
+        localStorage.setItem(STAFF_COUNTS_KEY, JSON.stringify(counts));
+      }
+
+      function updateStaffBadges(data) {
+        const prevCounts = getStoredCounts();
+
+        // Update Chef badge
+        const chefBadge = document.getElementById('chef-count');
+        if (chefBadge) {
+          if (data.chef_count > 0) {
+            chefBadge.textContent = data.chef_count;
+            chefBadge.style.display = 'inline';
+          } else {
+            chefBadge.style.display = 'none';
+          }
+
+          // Toast for new orders
+          if (data.chef_count > prevCounts.chef_count) {
+            const newCount = data.chef_count - prevCounts.chef_count;
+            showNotification(`🔥 ${newCount} new order(s) ready for preparation!`, 'warning');
+          }
+        }
+
+        // Update Waiter badge
+        const waiterBadge = document.getElementById('waiter-count');
+        if (waiterBadge) {
+          if (data.waiter_count > 0) {
+            waiterBadge.textContent = data.waiter_count;
+            waiterBadge.style.display = 'inline';
+          } else {
+            waiterBadge.style.display = 'none';
+          }
+
+          // Toast for new tasks
+          if (data.waiter_count > prevCounts.waiter_count) {
+            const newCount = data.waiter_count - prevCounts.waiter_count;
+            showNotification(`🍽️ ${newCount} new item(s) need your attention!`, 'info');
+          }
+        }
+
+        setStoredCounts(data);
+      }
+
+      // Initial fetch
+      fetch('/staff/counts', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(res => res.json())
+        .then(data => updateStaffBadges(data))
+        .catch(err => console.log('Staff counts error:', err));
+
+      // Poll every 10 seconds
+      setInterval(() => {
+        fetch('/staff/counts', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(res => res.json())
+          .then(data => updateStaffBadges(data))
+          .catch(err => console.log('Staff counts error:', err));
+      }, 10000);
+    })();
+    {% endif %}
   </script>
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>

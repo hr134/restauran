@@ -11,8 +11,8 @@ staff_bp = Blueprint('staff', __name__)
 @staff_bp.route('/chef')
 @role_required('chef', 'admin')
 def chef():
-    # Only show orders that are Placed, Confirmed, or Paid (essentially not canceled or delivered)
-    active_statuses = ['Placed', 'Confirmed', 'Paid', 'Preparing']
+    # Only show orders that are Confirmed or Preparing (after admin confirmation)
+    active_statuses = ['Confirmed', 'Preparing']
     orders = Order.query.filter(Order.status.in_(active_statuses)).order_by(Order.created_at.asc()).all()
     for o in orders:
         try:
@@ -24,7 +24,8 @@ def chef():
 @staff_bp.route('/chef/data')
 @role_required('chef', 'admin')
 def chef_data():
-    active_statuses = ['Placed', 'Confirmed', 'Paid', 'Preparing']
+    # Only show Confirmed or Preparing orders
+    active_statuses = ['Confirmed', 'Preparing']
     orders = Order.query.filter(Order.status.in_(active_statuses)).order_by(Order.created_at.asc()).all()
     orders_json = []
     for o in orders:
@@ -107,3 +108,31 @@ def update_reservation_status(res_id):
             return jsonify({'success': True, 'message': msg})
     
     return redirect(request.referrer or url_for('staff.waiter'))
+
+@staff_bp.route('/counts')
+def staff_counts():
+    """Return notification counts for navbar badges - accessible to any logged-in user"""
+    role = session.get('role', '')
+    is_admin = session.get('is_admin', False)
+    
+    chef_count = 0
+    waiter_count = 0
+    
+    # Chef count: Confirmed orders waiting to be prepared
+    if role in ['chef', 'admin'] or is_admin:
+        chef_count = Order.query.filter(Order.status == 'Confirmed').count()
+    
+    # Waiter count: Ready orders to serve + confirmed reservations needing attention
+    if role in ['waiter', 'admin'] or is_admin:
+        ready_orders = Order.query.filter(Order.status == 'Ready').count()
+        today = datetime.now(pytz.timezone('Asia/Dhaka')).strftime('%Y-%m-%d')
+        confirmed_res = Reservation.query.filter(
+            Reservation.date >= today,
+            Reservation.status == 'Confirmed'
+        ).count()
+        waiter_count = ready_orders + confirmed_res
+    
+    return jsonify({
+        'chef_count': chef_count,
+        'waiter_count': waiter_count
+    })
