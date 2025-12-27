@@ -261,8 +261,78 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
+    // Notification Sound System using Web Audio API
+    const NotificationSound = (function () {
+      let audioContext = null;
+      let hasUserInteracted = false;
+
+      // Track user interaction for audio permission
+      document.addEventListener('click', () => { hasUserInteracted = true; }, { once: true });
+      document.addEventListener('keydown', () => { hasUserInteracted = true; }, { once: true });
+
+      function getAudioContext() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return audioContext;
+      }
+
+      function playNotificationSound(type = 'default') {
+        if (!hasUserInteracted) return; // Respect browser autoplay policy
+
+        try {
+          const ctx = getAudioContext();
+          if (ctx.state === 'suspended') {
+            ctx.resume();
+          }
+
+          const oscillator = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(ctx.destination);
+
+          // Different sounds for different notification types
+          let freq1, freq2, duration;
+          switch (type) {
+            case 'warning': // New orders (chef)
+              freq1 = 880; freq2 = 1100; duration = 0.15;
+              break;
+            case 'info': // Waiter notifications
+              freq1 = 660; freq2 = 880; duration = 0.12;
+              break;
+            case 'success':
+              freq1 = 523; freq2 = 659; duration = 0.1;
+              break;
+            case 'danger':
+              freq1 = 440; freq2 = 330; duration = 0.2;
+              break;
+            default:
+              freq1 = 587; freq2 = 784; duration = 0.12;
+          }
+
+          // First tone
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(freq1, ctx.currentTime);
+          oscillator.frequency.setValueAtTime(freq2, ctx.currentTime + duration);
+
+          // Gentle fade in and out
+          gainNode.gain.setValueAtTime(0, ctx.currentTime);
+          gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration * 2);
+
+          oscillator.start(ctx.currentTime);
+          oscillator.stop(ctx.currentTime + duration * 2);
+        } catch (e) {
+          console.log('Audio not available:', e);
+        }
+      }
+
+      return { play: playNotificationSound };
+    })();
+
     // Premium Notification System
-    function showNotification(message, type = 'primary') {
+    function showNotification(message, type = 'primary', playSound = true) {
       const container = document.getElementById('notification-container');
       const toast = document.createElement('div');
       toast.className = `custom-notification ${type}`;
@@ -278,6 +348,11 @@
       toast.appendChild(contentDiv);
 
       container.appendChild(toast);
+
+      // Play sound if requested
+      if (playSound) {
+        NotificationSound.play(type);
+      }
 
       // Auto-remove after 4 seconds
       setTimeout(() => {

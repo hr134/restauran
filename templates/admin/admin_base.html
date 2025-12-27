@@ -197,8 +197,59 @@
             // Theme Toggle Logic - REMOVED
         });
 
+        // Notification Sound System using Web Audio API
+        const NotificationSound = (function () {
+            let audioContext = null;
+            let hasUserInteracted = false;
+
+            document.addEventListener('click', () => { hasUserInteracted = true; }, { once: true });
+            document.addEventListener('keydown', () => { hasUserInteracted = true; }, { once: true });
+
+            function getAudioContext() {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                return audioContext;
+            }
+
+            function playNotificationSound(type = 'default') {
+                if (!hasUserInteracted) return;
+                try {
+                    const ctx = getAudioContext();
+                    if (ctx.state === 'suspended') ctx.resume();
+
+                    const oscillator = ctx.createOscillator();
+                    const gainNode = ctx.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+
+                    let freq1, freq2, duration;
+                    switch (type) {
+                        case 'warning': freq1 = 880; freq2 = 1100; duration = 0.15; break;
+                        case 'info': freq1 = 660; freq2 = 880; duration = 0.12; break;
+                        case 'success': freq1 = 523; freq2 = 659; duration = 0.1; break;
+                        case 'danger': freq1 = 440; freq2 = 330; duration = 0.2; break;
+                        default: freq1 = 587; freq2 = 784; duration = 0.12;
+                    }
+
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(freq1, ctx.currentTime);
+                    oscillator.frequency.setValueAtTime(freq2, ctx.currentTime + duration);
+
+                    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration * 2);
+
+                    oscillator.start(ctx.currentTime);
+                    oscillator.stop(ctx.currentTime + duration * 2);
+                } catch (e) { console.log('Audio not available:', e); }
+            }
+            return { play: playNotificationSound };
+        })();
+
         // Premium Notification System
-        function showNotification(message, type = 'primary') {
+        function showNotification(message, type = 'primary', playSound = true) {
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
             toast.className = `custom-notification ${type}`;
@@ -219,6 +270,11 @@
 
             setTimeout(() => {
                 container.appendChild(toast);
+
+                // Play sound if requested
+                if (playSound) {
+                    NotificationSound.play(type);
+                }
 
                 // Auto-remove after 4 seconds
                 setTimeout(() => {
@@ -298,7 +354,26 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            const ADMIN_COUNTS_KEY = 'admin_notification_counts';
+
+            function getStoredCounts() {
+                try {
+                    return JSON.parse(localStorage.getItem(ADMIN_COUNTS_KEY)) || {
+                        orders_count: 0,
+                        reservations_count: 0,
+                        out_of_stock_count: 0,
+                        employee_requests_count: 0
+                    };
+                } catch { return { orders_count: 0, reservations_count: 0, out_of_stock_count: 0, employee_requests_count: 0 }; }
+            }
+
+            function setStoredCounts(counts) {
+                localStorage.setItem(ADMIN_COUNTS_KEY, JSON.stringify(counts));
+            }
+
             const updateBadges = (data) => {
+                const prev = getStoredCounts();
+
                 // Helper to update individual badge
                 const update = (id, count) => {
                     const el = document.getElementById(id);
@@ -316,6 +391,22 @@
                 update('badge-orders', data.orders_count);
                 update('badge-reservations', data.reservations_count);
                 update('badge-requests', data.employee_requests_count);
+
+                // Notifications for increases
+                if (data.orders_count > prev.orders_count) {
+                    showNotification(`${data.orders_count - prev.orders_count} new order(s) arrived!`, 'warning');
+                }
+                if (data.reservations_count > prev.reservations_count) {
+                    showNotification(`${data.reservations_count - prev.reservations_count} new reservation(s)!`, 'info');
+                }
+                if (data.out_of_stock_count > prev.out_of_stock_count) {
+                    showNotification(`New inventory alert: ${data.out_of_stock_count} items low/out of stock`, 'danger');
+                }
+                if (data.employee_requests_count > prev.employee_requests_count) {
+                    showNotification(`New employee request pending`, 'info');
+                }
+
+                setStoredCounts(data);
             };
 
             // Initial fetch
