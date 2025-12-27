@@ -123,6 +123,11 @@
     }
 
     function updateDashboardUI(data) {
+        // Track new items for sound alerts
+        const prevResIds = new Set(Array.from(document.querySelectorAll('.reservation-item')).map(el => el.dataset.resId));
+        const prevOrderIds = new Set(Array.from(document.querySelectorAll('.ready-order-item')).map(el => el.dataset.orderId));
+        let newItemsCount = 0;
+
         // Update Reservations
         const resContainer = document.getElementById('reservations-container');
         if (!data.reservations || data.reservations.length === 0) {
@@ -130,6 +135,7 @@
         } else {
             let resHtml = '';
             data.reservations.forEach(res => {
+                if (!prevResIds.has(String(res.id))) newItemsCount++;
                 const actionHtml = res.status === 'Confirmed' ?
                     `<button onclick="updateResStatus(${res.id}, 'Arrived')" class="btn btn-sm btn-outline-success">Arrived</button>` : '';
                 resHtml += `
@@ -152,6 +158,7 @@
         } else {
             let ordersHtml = '';
             data.orders.forEach(order => {
+                if (!prevOrderIds.has(String(order.id))) newItemsCount++;
                 ordersHtml += `
                     <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center ready-order-item" data-order-id="${order.id}" style="background: var(--bg-hover);">
                         <div>
@@ -167,9 +174,13 @@
             });
             ordersContainer.innerHTML = ordersHtml;
         }
+
+        if (newItemsCount > 0) {
+            showNotification(`${newItemsCount} NEW Task(s) for Waiter!`, 'info');
+        }
     }
 
-    // Start polling every 5 seconds for faster real-time updates
+    // Start polling every 5 seconds
     startPolling('{{ url_for("staff.waiter_data") }}', 5000, (data) => {
         refreshDashboard(data);
     });

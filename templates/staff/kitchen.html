@@ -94,6 +94,9 @@
 
     function updateDashboardUI(data) {
         const container = document.getElementById('orders-container');
+        const prevOrderIds = new Set(Array.from(document.querySelectorAll('.order-card')).map(el => el.dataset.orderId));
+        let newOrdersCount = 0;
+
         if (!data.orders || data.orders.length === 0) {
             container.innerHTML = `
                 <div id="no-orders-msg" class="col-12 text-center py-5">
@@ -105,9 +108,14 @@
         }
 
         let html = '';
-        data.orders.forEach(order => {
+        data.orders.forEach((order, index) => {
+            if (!prevOrderIds.has(String(order.id))) {
+                newOrdersCount++;
+            }
+
             const borderClass = order.status === 'Preparing' ? 'warning' : 'primary';
             const badgeClass = order.status === 'Preparing' ? 'bg-warning text-dark' : 'bg-primary';
+            const isOldest = index === 0 && order.status !== 'Preparing';
 
             let itemsHtml = '';
             order.items.forEach(item => {
@@ -121,14 +129,15 @@
 
             let actionHtml = '';
             if (['Placed', 'Confirmed', 'Paid'].includes(order.status)) {
-                actionHtml = `<button onclick="updateStatus(${order.id}, 'Preparing')" class="btn btn-warning w-100">Start Preparing</button>`;
+                actionHtml = `<button onclick="updateStatus(${order.id}, 'Preparing')" class="btn ${isOldest ? 'btn-danger pulse' : 'btn-warning'} w-100">${isOldest ? 'PROCESS NEXT' : 'Start Preparing'}</button>`;
             } else if (order.status === 'Preparing') {
                 actionHtml = `<button onclick="updateStatus(${order.id}, 'Ready')" class="btn btn-success w-100">Mark Ready</button>`;
             }
 
             html += `
                 <div class="col-md-6 col-lg-4 mb-4 order-card" data-order-id="${order.id}">
-                    <div class="card h-100 border-${borderClass} shadow-sm" style="background: var(--card-bg);">
+                    <div class="card h-100 border-${borderClass} shadow-sm position-relative" style="background: var(--card-bg);">
+                        ${isOldest ? '<span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger" style="z-index:100;">PRIORITY: OLDEST</span>' : ''}
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <span class="fw-bold">Order #${order.unique_order_number}</span>
                             <span class="badge order-status-badge ${badgeClass}">${order.status}</span>
@@ -144,10 +153,15 @@
                 </div>
             `;
         });
+
         container.innerHTML = html;
+
+        if (newOrdersCount > 0) {
+            showNotification(`${newOrdersCount} NEW Order(s) Received!`, 'warning');
+        }
     }
 
-    // Start polling every 5 seconds for faster real-time updates
+    // Start polling every 5 seconds
     startPolling('{{ url_for("staff.chef_data") }}', 5000, (data) => {
         refreshDashboard(data);
     });

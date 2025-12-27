@@ -213,37 +213,49 @@
             }
 
             function playNotificationSound(type = 'default') {
-                if (!hasUserInteracted) return;
+                if (!hasUserInteracted) {
+                    if (!document.getElementById('audio-unblock-hint')) {
+                        const hint = document.createElement('div');
+                        hint.id = 'audio-unblock-hint';
+                        hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable sound alerts';
+                        hint.style = 'position:fixed; bottom:20px; right:20px; background:#ff5722; color:white; padding:10px 20px; border-radius:30px; z-index:10000; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.3);';
+                        hint.onclick = () => { hasUserInteracted = true; hint.remove(); };
+                        document.body.appendChild(hint);
+                    }
+                    return;
+                }
                 try {
                     const ctx = getAudioContext();
                     if (ctx.state === 'suspended') ctx.resume();
 
-                    const oscillator = ctx.createOscillator();
-                    const gainNode = ctx.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(ctx.destination);
-
-                    let freq1, freq2, duration;
-                    switch (type) {
-                        case 'warning': freq1 = 880; freq2 = 1100; duration = 0.15; break;
-                        case 'info': freq1 = 660; freq2 = 880; duration = 0.12; break;
-                        case 'success': freq1 = 523; freq2 = 659; duration = 0.1; break;
-                        case 'danger': freq1 = 440; freq2 = 330; duration = 0.2; break;
-                        default: freq1 = 587; freq2 = 784; duration = 0.12;
+                    function playTone(freq, startTime, duration, volume = 0.3) {
+                        const osc = ctx.createOscillator();
+                        const osc2 = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, startTime);
+                        osc2.type = 'sine'; osc2.frequency.setValueAtTime(freq * 2, startTime);
+                        gain.gain.setValueAtTime(0, startTime);
+                        gain.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                        osc.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
+                        osc.start(startTime); osc2.start(startTime);
+                        osc.stop(startTime + duration); osc2.stop(startTime + duration);
                     }
 
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(freq1, ctx.currentTime);
-                    oscillator.frequency.setValueAtTime(freq2, ctx.currentTime + duration);
-
-                    gainNode.gain.setValueAtTime(0, ctx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration * 2);
-
-                    oscillator.start(ctx.currentTime);
-                    oscillator.stop(ctx.currentTime + duration * 2);
-                } catch (e) { console.log('Audio not available:', e); }
+                    const now = ctx.currentTime;
+                    switch (type) {
+                        case 'warning': // New Order - Bright Ding-Dong
+                            playTone(880, now, 0.4); playTone(1108.73, now + 0.1, 0.5); break;
+                        case 'info': // New Res - Sweet Chime
+                            playTone(659.25, now, 0.3); playTone(783.99, now + 0.1, 0.4); break;
+                        case 'success': // Success - Light blip
+                            playTone(523.25, now, 0.1, 0.2); playTone(659.25, now + 0.05, 0.1, 0.2); break;
+                        case 'danger': // Error/Inventory - Urgent
+                            playTone(440, now, 0.2); playTone(349.23, now + 0.15, 0.3); break;
+                        default: // Default
+                            playTone(587.33, now, 0.2); playTone(440, now + 0.1, 0.2);
+                    }
+                } catch (e) { console.log('Audio error:', e); }
             }
             return { play: playNotificationSound };
         })();
