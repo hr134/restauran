@@ -217,8 +217,8 @@
                     if (!document.getElementById('audio-unblock-hint')) {
                         const hint = document.createElement('div');
                         hint.id = 'audio-unblock-hint';
-                        hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable sound alerts';
-                        hint.style = 'position:fixed; bottom:20px; right:20px; background:#ff5722; color:white; padding:10px 20px; border-radius:30px; z-index:10000; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.3);';
+                        hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable staff alerts';
+                        hint.style = 'position:fixed; bottom:20px; right:20px; background:#ff5722; color:white; padding:10px 20px; border-radius:30px; z-index:10000; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.3); animation:pulse 2s infinite;';
                         hint.onclick = () => { hasUserInteracted = true; hint.remove(); };
                         document.body.appendChild(hint);
                     }
@@ -228,24 +228,32 @@
                     const ctx = getAudioContext();
                     if (ctx.state === 'suspended') ctx.resume();
 
-                    function playTone(freq, startTime, duration, volume = 0.3) {
+                    function playTone(freq, startTime, duration, volume = 0.3, type = 'sine', detune = 0) {
                         const osc = ctx.createOscillator();
-                        const osc2 = ctx.createOscillator();
                         const gain = ctx.createGain();
-                        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, startTime);
-                        osc2.type = 'sine'; osc2.frequency.setValueAtTime(freq * 2, startTime);
+                        osc.type = type;
+                        osc.frequency.setValueAtTime(freq, startTime);
+                        osc.detune.setValueAtTime(detune, startTime);
                         gain.gain.setValueAtTime(0, startTime);
-                        gain.gain.linearRampToValueAtTime(volume, startTime + 0.01);
-                        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-                        osc.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
-                        osc.start(startTime); osc2.start(startTime);
-                        osc.stop(startTime + duration); osc2.stop(startTime + duration);
+                        if (type === 'misty') {
+                            gain.gain.linearRampToValueAtTime(volume, startTime + 0.1);
+                            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                            osc.type = 'sine';
+                        } else {
+                            gain.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+                            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                        }
+                        osc.connect(gain); gain.connect(ctx.destination);
+                        osc.start(startTime); osc.stop(startTime + duration);
                     }
 
                     const now = ctx.currentTime;
                     switch (type) {
-                        case 'warning': // New Order - Bright Ding-Dong
-                            playTone(880, now, 0.4); playTone(1108.73, now + 0.1, 0.5); break;
+                        case 'warning': // New Order - "Misty" Tone
+                            playTone(440, now, 1.5, 0.25, 'misty', 0);
+                            playTone(442, now + 0.05, 1.6, 0.20, 'misty', 5);
+                            playTone(659.25, now + 0.2, 1.4, 0.15, 'misty', -5);
+                            break;
                         case 'info': // New Res - Sweet Chime
                             playTone(659.25, now, 0.3); playTone(783.99, now + 0.1, 0.4); break;
                         case 'success': // Success - Light blip
@@ -387,19 +395,29 @@
                 const prev = getStoredCounts();
 
                 // Helper to update individual badge
-                const update = (id, count) => {
+                const update = (id, count, isInventory = false) => {
                     const el = document.getElementById(id);
                     if (el) {
-                        if (count > 0) {
+                        // Persist inventory badge even if 0
+                        if (count > 0 || isInventory) {
                             el.textContent = count;
                             el.style.display = 'inline-block';
+                            if (isInventory && count > 0) {
+                                el.classList.add('pulse-bg'); // Suggesting a CSS class for urgency
+                                el.style.background = '#ffc107'; // Golden for warning
+                                el.style.color = '#000';
+                            } else if (isInventory) {
+                                el.classList.remove('pulse-bg');
+                                el.style.background = '#6c757d'; // Gray for empty
+                                el.style.color = '#fff';
+                            }
                         } else {
                             el.style.display = 'none';
                         }
                     }
                 };
 
-                update('badge-inventory', data.out_of_stock_count);
+                update('badge-inventory', data.out_of_stock_count, true);
                 update('badge-orders', data.orders_count);
                 update('badge-reservations', data.reservations_count);
                 update('badge-requests', data.employee_requests_count);
