@@ -218,7 +218,6 @@ def inject_global_data():
     return dict(cart_count=count, best_rated_item=get_best_rated_item())
 
 
-# -------------------------
 # Keep-Alive System for Render
 # -------------------------
 @app.route('/health')
