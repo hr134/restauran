@@ -48,12 +48,8 @@
               <span class="best-rated-badge">Best Rated</span>
               {% endif %}
             </p>
-            {% if it.availability and it.stock_quantity > 0 %}
             <a href="{{ url_for('cart.add_to_cart', item_id=it.id) }}"
               class="btn btn-sm btn-primary w-100 ajax-add-cart"><i class="bi bi-cart-plus me-1"></i>Add to Cart</a>
-            {% else %}
-            <button class="btn btn-sm btn-secondary w-100" disabled>Out of Stock</button>
-            {% endif %}
           </div>
         </div>
       </div>
