@@ -129,7 +129,7 @@
 
             let actionHtml = '';
             if (['Placed', 'Confirmed', 'Paid'].includes(order.status)) {
-                actionHtml = `<button onclick="updateStatus(${order.id}, 'Preparing')" class="btn ${isOldest ? 'btn-danger pulse' : 'btn-warning'} w-100">${isOldest ? 'PROCESS NEXT' : 'Start Preparing'}</button>`;
+                actionHtml = `<button onclick="updateStatus(${order.id}, 'Preparing')" class="btn ${isOldest ? 'btn-danger pulse' : 'btn-warning'} w-100">${isOldest ? 'START PROCESSING' : 'Start Preparing'}</button>`;
             } else if (order.status === 'Preparing') {
                 actionHtml = `<button onclick="updateStatus(${order.id}, 'Ready')" class="btn btn-success w-100">Mark Ready</button>`;
             }

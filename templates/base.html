@@ -287,7 +287,7 @@
           if (isStaff && !document.getElementById('audio-unblock-hint')) {
             const hint = document.createElement('div');
             hint.id = 'audio-unblock-hint';
-            hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable staff alerts';
+            hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable alerts';
             hint.style = 'position:fixed; bottom:20px; right:20px; background:#ff5722; color:white; padding:10px 20px; border-radius:30px; z-index:10000; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.3); animation:pulse 2s infinite;';
             hint.onclick = () => { hasUserInteracted = true; hint.remove(); };
             document.body.appendChild(hint);

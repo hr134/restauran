@@ -217,7 +217,7 @@
                     if (!document.getElementById('audio-unblock-hint')) {
                         const hint = document.createElement('div');
                         hint.id = 'audio-unblock-hint';
-                        hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable staff alerts';
+                        hint.innerHTML = '<i class="bi bi-volume-mute-fill"></i> Click to enable alerts';
                         hint.style = 'position:fixed; bottom:20px; right:20px; background:#ff5722; color:white; padding:10px 20px; border-radius:30px; z-index:10000; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.3); animation:pulse 2s infinite;';
                         hint.onclick = () => { hasUserInteracted = true; hint.remove(); };
                         document.body.appendChild(hint);
@@ -382,9 +382,10 @@
                         orders_count: 0,
                         reservations_count: 0,
                         out_of_stock_count: 0,
+                        low_stock_count: 0,
                         employee_requests_count: 0
                     };
-                } catch { return { orders_count: 0, reservations_count: 0, out_of_stock_count: 0, employee_requests_count: 0 }; }
+                } catch { return { orders_count: 0, reservations_count: 0, out_of_stock_count: 0, low_stock_count: 0, employee_requests_count: 0 }; }
             }
 
             function setStoredCounts(counts) {
@@ -395,20 +396,24 @@
                 const prev = getStoredCounts();
 
                 // Helper to update individual badge
-                const update = (id, count, isInventory = false) => {
+                const update = (id, count, isInventory = false, severity = 'warning') => {
                     const el = document.getElementById(id);
                     if (el) {
-                        // Persist inventory badge even if 0
                         if (count > 0 || isInventory) {
                             el.textContent = count;
                             el.style.display = 'inline-block';
                             if (isInventory && count > 0) {
-                                el.classList.add('pulse-bg'); // Suggesting a CSS class for urgency
-                                el.style.background = '#ffc107'; // Golden for warning
-                                el.style.color = '#000';
+                                el.classList.add('pulse-bg');
+                                if (severity === 'danger') {
+                                    el.style.background = '#dc3545'; // Red for out of stock
+                                    el.style.color = '#fff';
+                                } else {
+                                    el.style.background = '#ffc107'; // Yellow for low stock
+                                    el.style.color = '#000';
+                                }
                             } else if (isInventory) {
                                 el.classList.remove('pulse-bg');
-                                el.style.background = '#6c757d'; // Gray for empty
+                                el.style.background = '#6c757d'; // Gray for normal/empty
                                 el.style.color = '#fff';
                             }
                         } else {
@@ -417,7 +422,10 @@
                     }
                 };
 
-                update('badge-inventory', data.out_of_stock_count, true);
+                const totalInventoryAlerts = data.out_of_stock_count + data.low_stock_count;
+                const inventorySeverity = data.out_of_stock_count > 0 ? 'danger' : 'warning';
+
+                update('badge-inventory', totalInventoryAlerts, true, inventorySeverity);
                 update('badge-orders', data.orders_count);
                 update('badge-reservations', data.reservations_count);
                 update('badge-requests', data.employee_requests_count);
@@ -429,9 +437,14 @@
                 if (data.reservations_count > prev.reservations_count) {
                     showNotification(`${data.reservations_count - prev.reservations_count} new reservation(s)!`, 'info');
                 }
+
+                // Inventory Notifications
                 if (data.out_of_stock_count > prev.out_of_stock_count) {
-                    showNotification(`New inventory alert: ${data.out_of_stock_count} items low/out of stock`, 'danger');
+                    showNotification(`URGENT: ${data.out_of_stock_count} items are 0 in stock!`, 'danger');
+                } else if (data.low_stock_count > prev.low_stock_count) {
+                    showNotification(`Warning: ${data.low_stock_count} items reaching low stock threshold`, 'warning');
                 }
+
                 if (data.employee_requests_count > prev.employee_requests_count) {
                     showNotification(`New employee request pending`, 'info');
                 }
