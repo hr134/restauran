@@ -5,9 +5,9 @@ import io
 import uuid
 import difflib
 import random
-import requests
-import threading
-import time
+import requests  # For Render Keep-Alive
+import threading  # For Render Keep-Alive
+import time  # For Render Keep-Alive
 from functools import wraps
 from datetime import datetime, timedelta
 
@@ -218,11 +218,15 @@ def inject_global_data():
     return dict(cart_count=count, best_rated_item=get_best_rated_item())
 
 
+# ========================================
 # Keep-Alive System for Render
-# -------------------------
-@app.route('/health')
+# ========================================
+# This section prevents Render free tier from sleeping after 15 minutes of inactivity
+# Set environment variable: RENDER_EXTERNAL_URL = https://your-app-name.onrender.com
+
+@app.route('/health')  # For Render Keep-Alive
 def health_check():
-    """Simple health check endpoint for keep-alive pings"""
+    """Simple health check endpoint for keep-alive pings (For Render Keep-Alive)"""
     return jsonify({
         'status': 'alive',
         'timestamp': datetime.now().isoformat(),
@@ -230,9 +234,9 @@ def health_check():
     }), 200
 
 
-def keep_alive_worker():
+def keep_alive_worker():  # For Render Keep-Alive
     """
-    Background worker that pings the site every 14 minutes
+    Background worker that pings the site every 14 minutes (For Render Keep-Alive)
     to prevent Render from putting it to sleep after 15 minutes of inactivity
     """
     # Wait 2 minutes after startup before first ping
@@ -259,11 +263,13 @@ def keep_alive_worker():
         time.sleep(840)
 
 
-# Start keep-alive thread only in production (when RENDER_EXTERNAL_URL is set)
+# Start keep-alive thread only in production (For Render Keep-Alive)
+# Only activates when RENDER_EXTERNAL_URL environment variable is set
 if os.environ.get('RENDER_EXTERNAL_URL'):
     keep_alive_thread = threading.Thread(target=keep_alive_worker, daemon=True)
     keep_alive_thread.start()
     print("[Keep-Alive] Background worker started - site will ping itself every 14 minutes")
+# ======================================== End of Keep-Alive System ========================================
 
 
 # -------------------------

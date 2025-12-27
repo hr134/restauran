@@ -1,3 +1,41 @@
+. Import Section (Lines 8-10):
+python
+import requests  # For Render Keep-Alive
+import threading  # For Render Keep-Alive
+import time  # For Render Keep-Alive
+2. Keep-Alive Section Header (Lines 220-224):
+python
+# ========================================
+# Keep-Alive System for Render
+# ========================================
+# This section prevents Render free tier from sleeping after 15 minutes of inactivity
+# Set environment variable: RENDER_EXTERNAL_URL = https://your-app-name.onrender.com
+3. Health Check Endpoint (Line 226):
+python
+@app.route('/health')  # For Render Keep-Alive
+def health_check():
+    """Simple health check endpoint for keep-alive pings (For Render Keep-Alive)"""
+4. Worker Function (Line 235):
+python
+def keep_alive_worker():  # For Render Keep-Alive
+    """
+    Background worker that pings the site every 14 minutes (For Render Keep-Alive)
+    to prevent Render from putting it to sleep after 15 minutes of inactivity
+    """
+5. Thread Initialization (Lines 262-269):
+python
+# Start keep-alive thread only in production (For Render Keep-Alive)
+# Only activates when RENDER_EXTERNAL_URL environment variable is set
+if os.environ.get('RENDER_EXTERNAL_URL'):
+    keep_alive_thread = threading.Thread(target=keep_alive_worker, daemon=True)
+    keep_alive_thread.start()
+    print("[Keep-Alive] Background worker started - site will ping itself every 14 minutes")
+# ======================================== End of Keep-Alive System ========================================
+
+
+
+
+
 # Keep-Alive System for Render
 
 ## Overview
