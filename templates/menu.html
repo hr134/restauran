@@ -49,11 +49,11 @@
             else 'Not available' }}</span>
         </p>
         <div class="mt-auto">
-          {% if it.availability %}
+          {% if it.availability and it.stock_quantity > 0 %}
           <a href="javascript:void(0);" onclick="addToCart({{ it.id }}, this)" class="btn btn-sm btn-primary">Add to
             Cart</a>
           {% else %}
-          <button class="btn btn-sm btn-secondary" disabled>Unavailable</button>
+          <button class="btn btn-sm btn-secondary" disabled>Out of Stock</button>
           {% endif %}
         </div>
       </div>

@@ -63,7 +63,7 @@ def add_to_cart(item_id):
         msg = f'Sorry, only {mi.stock_quantity} items left in stock.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'message': msg}), 400
-        flash(msg, 'warning')
+        flash(msg, 'danger')
         return redirect(request.referrer or url_for('main.menu'))
 
     cart[str(item_id)] = current_qty + 1
