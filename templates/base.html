@@ -830,7 +830,7 @@
           // Toast for new orders
           if (data.chef_count > prevCounts.chef_count) {
             const newCount = data.chef_count - prevCounts.chef_count;
-            showNotification(`🔥 ${newCount} new order(s) ready for preparation!`, 'warning');
+            showNotification(`${newCount} new order(s) ready for preparation!`, 'warning');
           }
         }
 
@@ -847,7 +847,7 @@
           // Toast for new tasks
           if (data.waiter_count > prevCounts.waiter_count) {
             const newCount = data.waiter_count - prevCounts.waiter_count;
-            showNotification(`🍽️ ${newCount} new item(s) need your attention!`, 'info');
+            showNotification(`${newCount} new item(s) need your attention!`, 'info');
           }
         }
 
