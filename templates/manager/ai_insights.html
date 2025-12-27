@@ -1,0 +1,135 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}AI Insights - Manager{% endblock %}
+
+{% block manager_title %}Manager Insights{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="glass-card p-4">
+        <h2 class="mb-4 text-white">🤖 Manager Insights</h2>
+
+        <div class="row">
+            <!-- Sales Predictions -->
+            <div class="col-md-6 mb-4">
+                <div class="card bg-dark-pro border-secondary h-100">
+                    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-white"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Next 7 Days
+                            Prediction</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if predictions and predictions.success %}
+                        <div class="d-flex justify-content-between mb-3">
+                            <div>
+                                <small class="text-muted uppercase">Predicted Revenue</small>
+                                <h3 class="text-success">৳{{ "%.0f"|format(predictions.total_predicted_revenue) }}</h3>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted uppercase">Confidence</small>
+                                <h4 class="text-info">{{ "%.1f"|format(predictions.confidence_score * 100) }}%</h4>
+                            </div>
+                        </div>
+                        <canvas id="predictionChart" height="200"></canvas>
+                        {% else %}
+                        <div class="alert alert-warning">Not enough data for predictions yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart Recommendations -->
+            <div class="col-md-6 mb-4">
+                <div class="card bg-dark-pro border-secondary h-100">
+                    <div class="card-header border-secondary">
+                        <h5 class="mb-0 text-white"><i class="bi bi-lightbulb me-2 text-warning"></i>Operational
+                            Recommendations
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if stock_recommendations and stock_recommendations.recommendations %}
+                        <ul class="list-group list-group-flush">
+                            {% for rec in stock_recommendations.recommendations %}
+                            <li class="list-group-item bg-dark-pro text-light border-secondary">
+                                <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                                <strong>{{ rec.product_name }}</strong> (Stock: {{ rec.current_stock }})
+                                <br><small class="text-muted ms-4">Run out in {{ rec.days_until_stockout }} days</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted text-center py-4">No critical recommendations at this time.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Insights -->
+        <div class="card bg-dark-pro border-secondary">
+            <div class="card-header border-secondary">
+                <h5 class="mb-0 text-white"><i class="bi bi-people me-2 text-info"></i>Customer Behaviour Insights</h5>
+            </div>
+            <div class="card-body">
+                {% if customer_insights %}
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <h6 class="text-muted">Returning Rate</h6>
+                        <h3 class="text-white">{{ "%.1f"|format(customer_insights.returning_rate) }}%</h3>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h6 class="text-muted">Avg Purchase Frequency</h6>
+                        <h3 class="text-white">{{ "%.1f"|format(customer_insights.avg_frequency) }} days</h3>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h6 class="text-muted">Churn Risk</h6>
+                        <h3 class="text-danger">{{ customer_insights.churn_risk_count }} Users</h3>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">Gathering customer data...</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if predictions and predictions.success %}
+<script>
+    const predData = {{ predictions.predictions| tojson }};
+    const ctx = document.getElementById('predictionChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: predData.map(d => d.date),
+            datasets: [{
+                label: 'Predicted Sales',
+                data: predData.map(d => d.predicted_sales),
+                borderColor: '#198754',
+                borderDash: [5, 5],
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(128, 128, 128, 0.1)' },
+                    ticks: { color: '#888' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#888' }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

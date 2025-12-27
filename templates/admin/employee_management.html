@@ -1,0 +1,299 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Employee Management - Admin{% endblock %}
+
+{% block admin_title %}Employee Management{% endblock %}
+
+{% block content %}
+<div class="glass-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0 text-white">👔 Employee Management</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="bi bi-person-plus-fill me-2"></i>Add Employee
+        </button>
+    </div>
+
+    <!-- Pending Requests Alert -->
+    {% if pending_requests %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-info-circle-fill me-2"></i>
+            You have <strong>{{ pending_requests|length }}</strong> pending request(s).
+        </div>
+        <a href="{{ url_for('admin.employee_requests') }}" class="btn btn-sm btn-light">View Requests</a>
+    </div>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Position</th>
+                    <th>Dept</th>
+                    <th>Salary</th>
+                    <th>Hired</th>
+                    <th>Status</th>
+                    <th>Days</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td>
+                        <div class="fw-bold text-white">{{ employee.user.username }}</div>
+                        <div class="small text-muted">{{ employee.user.full_name or '' }}</div>
+                    </td>
+                    <td><span class="badge-admin badge-admin-info">{{ employee.user.role|capitalize }}</span></td>
+                    <td>{{ employee.position }}</td>
+                    <td>{{ employee.department or '-' }}</td>
+                    <td>৳{{ "%.2f"|format(employee.salary or 0) }}</td>
+                    <td>{{ employee.hire_date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <span
+                            class="badge {% if employee.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ employee.status|capitalize }}
+                        </span>
+                    </td>
+                    <td>{{ employee.total_days_worked() }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning edit-employee-btn" data-id="{{ employee.id }}"
+                            data-position="{{ employee.position }}" data-department="{{ employee.department or '' }}"
+                            data-salary="{{ employee.salary or 0 }}"
+                            data-hire="{{ employee.hire_date.strftime('%Y-%m-%d') }}"
+                            data-status="{{ employee.status }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <a href="{{ url_for('employees.delete_employee', id=employee.id) }}"
+                            class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark-pro text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Add New Employee</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('employees.add_employee') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- User Search/Select -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Search User</label>
+                        <input type="text" id="adminUserSearchInput" class="form-control admin-input mb-2"
+                            placeholder="Search by Name, Username or Customer ID...">
+
+                        <label class="form-label text-muted small">Select User</label>
+                        <select name="user_id" class="form-select admin-input" required>
+                            <option value="" selected disabled>Start typing to search...</option>
+                        </select>
+                        <small class="text-muted d-block mt-1">Only users with valid roles shown.</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Role / Position</label>
+                            <select name="position" class="form-select admin-input" required>
+                                <option value="chef">Chef</option>
+                                <option value="waiter">Waiter</option>
+                                <option value="admin">Admin</option>
+                                <option value="manager">Manager</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Department</label>
+                            <select name="department" class="form-select admin-input" required>
+                                <option value="Kitchen">Kitchen</option>
+                                <option value="Service">Service</option>
+                                <option value="Management">Management</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Salary (৳)</label>
+                            <input type="number" step="0.01" name="salary" class="form-control admin-input" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Hire Date</label>
+                            <input type="date" name="hire_date" class="form-control admin-input"
+                                value="{{ now().strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Employee Modal -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark-pro text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Edit Employee</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editEmployeeForm" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="edit_employee_id">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Role / Position</label>
+                            <select id="edit_position" name="position" class="form-select admin-input" required>
+                                <option value="chef">Chef</option>
+                                <option value="waiter">Waiter</option>
+                                <option value="admin">Admin</option>
+                                <option value="manager">Manager</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Department</label>
+                            <select id="edit_department" name="department" class="form-select admin-input" required>
+                                <option value="Kitchen">Kitchen</option>
+                                <option value="Service">Service</option>
+                                <option value="Management">Management</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Salary (৳)</label>
+                            <input type="number" step="0.01" id="edit_salary" name="salary"
+                                class="form-control admin-input" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Hire Date</label>
+                            <input type="date" id="edit_hire_date" name="hire_date" class="form-control admin-input"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Status</label>
+                        <select id="edit_status" name="status" class="form-select admin-input">
+                            <option value="active">Active</option>
+                            <option value="on_leave">On Leave</option>
+                            <option value="terminated">Terminated</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Update Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch users for add modal
+    fetch("{{ url_for('employees.staff_list') }}") // Assumes such a route exists or similar logic
+        // If route doesn't exist, we might need to rely on server side check or reuse existing logic
+        // For now, let's assume we can load users via generic fetch if route existed, 
+        // OR simply populate it if passed from backend.
+        // The original template used a search or separate route. 
+        // Let's use the 'users_search' logic if available.
+        ;
+
+    // Load available users when modal opens
+    // Load available users when modal opens
+    const addModal = document.getElementById('addEmployeeModal');
+    if (addModal) {
+        const searchInput = document.getElementById('adminUserSearchInput');
+        let debounceTimer;
+
+        const performSearch = (query) => {
+            const select = addModal.querySelector('select[name="user_id"]');
+
+            if (!query) {
+                select.innerHTML = '<option value="" selected disabled>Start typing to search...</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="" disabled>Searching...</option>';
+
+            fetch(`{{ url_for('employees.users_search') }}?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.users && data.users.length > 0) {
+                        select.innerHTML = '<option value="" selected disabled>Select a user...</option>';
+                        data.users.forEach(u => {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            const memberId = u.member_id ? ` [ID: ${u.member_id}]` : '';
+                            opt.textContent = `${u.full_name || u.username} (@${u.username})${memberId} - ${u.role}`;
+                            select.appendChild(opt);
+                        });
+                    } else {
+                        select.innerHTML = '<option value="" disabled>No match found</option>';
+                    }
+                })
+                .catch(err => {
+                    select.innerHTML = '<option value="" disabled>Error searching users</option>';
+                });
+        };
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    performSearch(this.value.trim());
+                }, 300);
+            });
+        }
+
+        addModal.addEventListener('shown.bs.modal', function () {
+            if (searchInput) searchInput.focus();
+        });
+    }
+
+    // Edit logic
+    document.querySelectorAll('.edit-employee-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const data = this.dataset;
+            editEmployee(data.id, data.position, data.department, data.salary, data.hire, data.status);
+        });
+    });
+
+    function editEmployee(id, position, department, salary, hireDate, status) {
+        document.getElementById('edit_employee_id').value = id;
+        document.getElementById('edit_position').value = position;
+        document.getElementById('edit_department').value = department;
+        document.getElementById('edit_salary').value = salary;
+        document.getElementById('edit_hire_date').value = hireDate;
+        document.getElementById('edit_status').value = status;
+
+        const form = document.getElementById('editEmployeeForm');
+        form.action = `/employees/edit/${id}`;
+
+        new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+    }
+</script>
+{% endblock %}

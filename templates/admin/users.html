@@ -1,0 +1,329 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Users - Admin{% endblock %}
+
+{% block admin_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0 text-white">Registered Users</h5>
+        <span class="badge badge-admin-info">{{ users|length }} Users</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Contact</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr id="user-row-{{ user.username }}">
+                    <td>#{{ user.id }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ user.profile_image and url_for('static', filename='uploads/' ~ user.profile_image) or url_for('static', filename='img/placeholder.jpg') }}"
+                                class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                            <div>
+                                <div class="fw-bold text-white">{{ user.username }}</div>
+                                <div class="small text-muted">{{ user.full_name or 'No Name' }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="small text-white mb-1"><i class="bi bi-envelope me-1 text-primary"></i>{{ user.email
+                            }}</div>
+                        {% if user.phone %}
+                        <div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ user.phone }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.role == 'admin' %}
+                        <span class="badge-admin badge-admin-success">Admin</span>
+                        {% else %}
+                        <span class="badge-admin badge-admin-info">{{ user.role|capitalize }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.email_verified %}
+                        <span class="badge bg-success rounded-pill small">Verified</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark rounded-pill small">Unverified</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="small text-muted">{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-light" onclick="openUserModal('{{ user.username }}')">
+                                <i class="bi bi-eye"></i> Profile
+                            </button>
+                            {% if user.role == 'customer' %}
+                            <a href="{{ url_for('crm.view_customer', id=user.id) }}"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-graph-up"></i> CRM
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Logic Reused from index.html via script below -->
+<!-- We need to ensure the modal exists in admin_base or here. 
+     Currently userModal is in index.html. Ideally it should be in admin_base or included.
+     However, to avoid refactoring index.html too much, I'll copy the minimal modal structure here or move it to base.
+     Actually, looking at admin_base.html, it doesn't have the userModal. 
+     index.html has it. I should verify if I can easily move it or just duplicate/include it.
+     For safety and standard practice, I will include the modal markup here as well since it's local to the view logic usually.
+-->
+
+<!-- USER DETAIL MODAL -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark-pro border-secondary text-light">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" style="color: rgb(192, 188, 188) !important;">
+                    <i class="bi bi-person-gear me-2"></i>User Profile
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body border-secondary">
+                <div class="text-center mb-4">
+                    <img id="userImage" src="" class="rounded-circle border border-secondary p-1" width="100"
+                        height="100" style="object-fit:cover;">
+                </div>
+                <div class="row g-3">
+                    <div class="col-12"><label class="text-muted small"
+                            style="color: dimgray !important;">Username</label><input type="text" id="userUsername"
+                            class="form-control admin-input" readonly></div>
+                    <div class="col-md-6">
+                        <label class="text-muted small" style="color: dimgray !important;">
+                            Email
+                            <span id="userVerifiedBadge"></span>
+                        </label>
+                        <input type="email" id="userEmail" class="form-control admin-input">
+                    </div>
+                    <div class="col-md-6"><label class="text-muted small" style="color: dimgray !important;">Full
+                            Name</label><input type="text" id="userFullName" class="form-control admin-input"></div>
+                    <div class="col-md-6"><label class="text-muted small"
+                            style="color: dimgray !important;">Phone</label><input type="text" id="userPhone"
+                            class="form-control admin-input"></div>
+                    <div class="col-md-6"><label class="text-muted small"
+                            style="color: dimgray !important;">City</label><input type="text" id="userCity"
+                            class="form-control admin-input"></div>
+                    <div class="col-12"><label class="text-muted small"
+                            style="color: dimgray !important;">Street</label><input type="text" id="userStreet"
+                            class="form-control admin-input"></div>
+                    <div class="col-12"><label class="text-muted small" style="color: dimgray !important;">User
+                            Role</label>
+                        <select id="userRole" class="form-select admin-input">
+                            <option value="customer">Customer</option>
+                            <option value="waiter">Waiter (Staff)</option>
+                            <option value="chef">Chef</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-danger me-auto" onclick="deleteUser()">Delete User</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentUsername = '';
+
+    // Reuse the logic from index.html (encapsulated here for Users page)
+    function openUserModal(username) {
+        if (!username) return;
+
+        // We can reuse the same endpoint /admin/user/<username>
+        fetch(`/admin/user/${username}`)
+            .then(res => { if (!res.ok) throw new Error('User not found'); return res.json(); })
+            .then(data => {
+                currentUsername = data.username;
+                document.getElementById('userUsername').value = data.username;
+                document.getElementById('userEmail').value = data.email;
+                document.getElementById('userFullName').value = data.full_name;
+                document.getElementById('userPhone').value = data.phone || '';
+                document.getElementById('userStreet').value = data.address_street || '';
+                document.getElementById('userCity').value = data.address_city || '';
+                document.getElementById('userRole').value = data.role;
+                document.getElementById('userImage').src = data.profile_image ? `/static/uploads/${data.profile_image}` : `/static/img/placeholder.jpg`;
+
+                const badge = document.getElementById('userVerifiedBadge');
+                if (data.email_verified) {
+                    badge.innerHTML = '<span class="badge bg-success small ms-2" style="font-size: 0.6rem;">VERIFIED</span>';
+                } else {
+                    badge.innerHTML = '<span class="badge bg-warning text-dark small ms-2" style="font-size: 0.6rem;">UNVERIFIED</span>';
+                }
+
+                const modal = new bootstrap.Modal(document.getElementById('userModal'));
+                const deleteBtn = document.querySelector('#userModal .btn-outline-danger');
+                if (deleteBtn) {
+                    if (data.username === 'admin') {
+                        deleteBtn.disabled = true;
+                        deleteBtn.title = "System account 'admin' cannot be deleted.";
+                    } else {
+                        deleteBtn.disabled = false;
+                        deleteBtn.title = "";
+                    }
+                }
+                modal.show();
+            })
+            .catch(err => showNotification(err.message, 'danger'));
+    }
+
+    function saveUser() {
+        const payload = {
+            email: document.getElementById('userEmail').value.trim(),
+            full_name: document.getElementById('userFullName').value.trim(),
+            phone: document.getElementById('userPhone').value.trim(),
+            address_street: document.getElementById('userStreet').value.trim(),
+            address_city: document.getElementById('userCity').value.trim(),
+            role: document.getElementById('userRole').value
+        };
+
+        fetch(`/admin/user/${currentUsername}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(res => { if (!res.ok) throw new Error('Failed to update user'); return res.json(); })
+            .then(data => {
+                const actionMsg = data.message || 'User updated successfully!';
+                showNotification(actionMsg, 'success');
+
+                if (data.email) {
+                    let emailMsg = '';
+                    let emailType = 'info';
+
+                    if (data.email_status === 'pending') {
+                        emailMsg = `Notification queued for ${data.email}`;
+                    } else if (data.email_status === true) {
+                        emailMsg = `Notification sent to ${data.email}`;
+                        emailType = 'success';
+                    } else if (data.email_status === false) {
+                        emailMsg = `Email couldn't be sent to ${data.email}`;
+                        emailType = 'warning';
+                    }
+
+                    if (emailMsg) {
+                        setTimeout(() => showNotification(emailMsg, emailType), 1500);
+                    }
+                }
+
+                // Dynamic update of the table row
+                const row = document.getElementById(`user-row-${currentUsername}`);
+                if (row) {
+                    // Update Full Name
+                    const nameEl = row.cells[1].querySelector('.small.text-muted');
+                    if (nameEl) nameEl.textContent = payload.full_name || 'No Name';
+
+                    // Update Email
+                    const emailEl = row.cells[2].querySelector('.small.text-white');
+                    if (emailEl) emailEl.innerHTML = `<i class="bi bi-envelope me-1 text-primary"></i>${payload.email}`;
+
+                    // Update Phone
+                    let phoneEl = row.cells[2].querySelector('.bi-telephone')?.parentElement;
+                    if (payload.phone) {
+                        if (phoneEl) {
+                            phoneEl.innerHTML = `<i class="bi bi-telephone me-1"></i>${payload.phone}`;
+                        } else {
+                            phoneEl = document.createElement('div');
+                            phoneEl.className = 'small text-muted';
+                            phoneEl.innerHTML = `<i class="bi bi-telephone me-1"></i>${payload.phone}`;
+                            row.cells[2].appendChild(phoneEl);
+                        }
+                    } else if (phoneEl) {
+                        phoneEl.remove();
+                    }
+
+                    // Update Role
+                    const roleBadge = row.cells[3].querySelector('.badge-admin');
+                    if (roleBadge) {
+                        if (payload.role === 'admin') {
+                            roleBadge.className = 'badge-admin badge-admin-success';
+                            roleBadge.textContent = 'Admin';
+                        } else {
+                            roleBadge.className = 'badge-admin badge-admin-info';
+                            roleBadge.textContent = payload.role.charAt(0).toUpperCase() + payload.role.slice(1);
+                        }
+                    }
+                }
+                const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                if (modal) modal.hide();
+            })
+            .catch(err => showNotification(err.message, 'danger'));
+    }
+
+    async function deleteUser() {
+        if (!currentUsername) return;
+        const confirmed = await showConfirm(`Are you sure you want to delete user "${currentUsername}"?`, "Delete User", "bi-person-x");
+        if (!confirmed) return;
+
+        fetch(`/admin/user/${currentUsername}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+            .then(async res => {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Failed to delete user');
+                return data;
+            })
+            .then(data => {
+                let msg = data.message || 'User deleted successfully.';
+                let type = 'success';
+
+                if (data.email_status === 'pending') {
+                    msg += ` (Notification queued for ${data.email})`;
+                } else if (data.email_status === true) {
+                    msg += ` Notification sent to ${data.email}`;
+                } else if (data.email_status === false && data.email) {
+                    msg += ` (Note: Email couldn't be sent to ${data.email})`;
+                    type = 'warning';
+                }
+                showNotification(msg, type);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                modal.hide();
+                const row = document.getElementById(`user-row-${currentUsername}`);
+                if (row) {
+                    row.classList.add('fade-out');
+                    setTimeout(() => row.remove(), 500);
+                }
+            })
+            .catch(err => showNotification(err.message, 'danger'));
+    }
+</script>
+{% endblock %}

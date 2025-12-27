@@ -1,0 +1,147 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Sales Analytics - Admin{% endblock %}
+
+{% block admin_title %}Sales Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="glass-card p-4">
+    <h2 class="mb-4 text-white">📊 Sales Analytics Dashboard</h2>
+
+    <!-- Date Range Filter -->
+    <div class="card mb-4 bg-dark-pro border-secondary">
+        <div class="card-body">
+            <form class="row align-items-center">
+                <div class="col-auto">
+                    <label class="form-label text-muted small m-0 me-2">Time Period:</label>
+                </div>
+                <div class="col-auto">
+                    <select name="days" class="form-select admin-input" onchange="this.form.submit()">
+                        <option value="7" {% if days==7 %}selected{% endif %}>Last 7 Days</option>
+                        <option value="30" {% if days==30 %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if days==90 %}selected{% endif %}>Last 3 Months</option>
+                        <option value="365" {% if days==365 %}selected{% endif %}>Last Year</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-dark-pro border-secondary h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted small uppercase">Total Revenue</h6>
+                    <h3 class="text-success mb-0">৳{{ "%.2f"|format(total_revenue) }}</h3>
+                    <small class="text-white-50">{{ total_orders }} Orders</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark-pro border-secondary h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted small uppercase">Avg Order Value</h6>
+                    <h3 class="text-info mb-0">৳{{ "%.2f"|format(avg_order_value) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark-pro border-secondary h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted small uppercase">Today's Revenue</h6>
+                    <h3 class="text-warning mb-0">৳{{ "%.2f"|format(today_revenue) }}</h3>
+                    <small class="text-white-50">{{ today_orders_count }} Orders</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card bg-dark-pro border-secondary mb-4">
+                <div class="card-header border-secondary">
+                    <h5 class="mb-0 text-white">Revenue Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card bg-dark-pro border-secondary mb-4">
+                <div class="card-header border-secondary">
+                    <h5 class="mb-0 text-white">Top Products</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for item in top_products %}
+                    <div
+                        class="list-group-item bg-dark-pro border-secondary text-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">{{ item.name }}</div>
+                            <small class="text-muted">{{ item.count }} sold</small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">৳{{ "%.0f"|format(item.total_revenue) }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item bg-dark-pro border-secondary text-muted text-center">No data availalbe
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const trendData = {{ trend_data| tojson }};
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+
+    // Get style from CSS variable for consistency
+    const getCssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.date),
+            datasets: [{
+                label: 'Revenue (৳)',
+                data: trendData.map(d => d.revenue),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)', // Keep blue as it works for both
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(128, 128, 128, 0.1)' }, // Neutral grid
+                    ticks: { color: '#888' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#888' }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

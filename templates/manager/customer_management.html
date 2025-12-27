@@ -1,0 +1,159 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}Customer Relationships - Manager{% endblock %}
+
+{% block manager_title %}Customer Engagement Hub{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Quick Stats Cards (Smarter Manager View) -->
+    <div class="col-md-3">
+        <div class="card bg-dark-pro border-secondary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small text-uppercase mb-2">Total Customers</h6>
+                        <h3 class="mb-0 text-white">{{ customer_stats|length }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                        <i class="bi bi-people fs-4 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark-pro border-secondary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small text-uppercase mb-2">Avg. Order Value</h6>
+                        {% set total_avg = 0 %}
+                        {% for s in customer_stats %}{% set total_avg = total_avg + s.avg_order_value %}{% endfor %}
+                        <h3 class="mb-0 text-success">৳{{ "%.0f"|format(total_avg / (customer_stats|length or 1)) }}
+                        </h3>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                        <i class="bi bi-cash-stack fs-4 text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0 text-white"><i class="bi bi-list-stars me-2 text-info"></i>Active Customers</h5>
+        <div class="d-flex gap-2">
+            <div class="input-group input-group-sm w-auto">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i
+                        class="bi bi-search"></i></span>
+                <input type="text" class="form-control bg-dark border-secondary text-light"
+                    placeholder="Search customers..." id="customerSearch">
+            </div>
+            <a href="{{ url_for('crm.export_customers') }}" target="_blank" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" id="customerTable">
+            <thead class="bg-dark-pro text-muted small text-uppercase">
+                <tr>
+                    <th class="border-0 ps-4">Customer</th>
+                    <th class="border-0">Engagement</th>
+                    <th class="border-0">Total Spend</th>
+                    <th class="border-0">Tier</th>
+                    <th class="border-0 text-end pe-4">Action</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                {% for stat in customer_stats %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-3">
+                                {{ stat.customer.username[0]|upper }}
+                            </div>
+                            <div>
+                                <div class="text-white fw-bold">@{{ stat.customer.username }}</div>
+                                <div class="small text-muted">{{ stat.customer.full_name or 'No Name' }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center" style="width: 150px;">
+                            <div class="progress flex-grow-1 me-2"
+                                style="height: 6px; background: rgba(255,255,255,0.05);">
+                                <div class="progress-bar bg-info"
+                                    style="width: {{ [stat.total_orders * 5, 100]|min }}%"></div>
+                            </div>
+                            <span class="small text-muted">{{ stat.total_orders }} orders</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-success fw-bold">৳{{ "%.0f"|format(stat.total_spent) }}</div>
+                    </td>
+                    <td>
+                        {% if stat.tier == 'VIP' %}
+                        <span
+                            class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3">VIP</span>
+                        {% elif stat.tier == 'Gold' %}
+                        <span
+                            class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3">Gold</span>
+                        {% else %}
+                        <span
+                            class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-3">Regular</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{{ url_for('crm.view_customer', id=stat.customer.id) }}"
+                            class="btn btn-sm btn-outline-info rounded-pill px-3">
+                            Analyze
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.getElementById('customerSearch').addEventListener('keyup', function () {
+        let items = document.querySelectorAll('#customerTable tbody tr');
+        let val = this.value.toLowerCase();
+
+        items.forEach(item => {
+            let text = item.textContent.toLowerCase();
+            if (text.includes(val)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+</script>
+
+<style>
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: var(--manager-accent, #0d6efd);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        font-size: 1.1rem;
+    }
+
+    .bg-dark-pro {
+        background-color: rgba(33, 37, 41, 0.95);
+    }
+</style>
+{% endblock %}

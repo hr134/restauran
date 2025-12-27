@@ -1,0 +1,220 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Customer Detail - {{ customer.username }}{% endblock %}
+
+{% block admin_title %}Customer Profile: @{{ customer.username }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Customer Profile Summary -->
+    <div class="col-lg-4">
+        <div class="glass-card mb-4 text-center">
+            <div class="customer-avatar-large mb-3">
+                <img src="{{ customer.profile_image and url_for('static', filename='uploads/' ~ customer.profile_image) or url_for('static', filename='img/placeholder.jpg') }}"
+                    class="rounded-circle border border-primary p-2" width="120" height="120"
+                    style="object-fit: cover;">
+            </div>
+            <h4 class="text-white mb-1">{{ customer.full_name or customer.username }}</h4>
+            <div class="badge bg-primary mb-3">
+                {% if total_spent > 10000 %}VIP{% elif total_spent > 5000 %}Gold{% elif total_spent > 1000 %}Silver{%
+                else %}Regular{% endif %}
+            </div>
+
+            <div class="customer-contact-info text-start mt-3">
+                <div class="mb-2"><i class="bi bi-envelope text-primary me-2"></i><span class="text-light small">{{
+                        customer.email }}</span></div>
+                <div class="mb-2"><i class="bi bi-telephone text-primary me-2"></i><span class="text-light small">{{
+                        customer.phone or 'N/A' }}</span></div>
+                <div class="mb-2"><i class="bi bi-geo-alt text-primary me-2"></i><span class="text-light small">{{
+                        customer.address_city or 'N/A' }}{% if customer.address_district %}, {{
+                        customer.address_district }}{% endif %}</span></div>
+                <div class="mb-0"><i class="bi bi-calendar-check text-primary me-2"></i><span
+                        class="text-muted small">Joined: {{ customer.created_at.strftime('%Y-%m-%d') if
+                        customer.created_at else 'N/A' }}</span></div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="glass-card mb-4">
+            <h5 class="text-white mb-3">Engagement Stats</h5>
+            <div class="row text-center g-2">
+                <div class="col-6">
+                    <div class="p-2 border border-secondary rounded">
+                        <div class="text-muted small">Orders</div>
+                        <div class="h5 text-primary mb-0">{{ total_orders }}</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 border border-secondary rounded">
+                        <div class="text-muted small">Total Spent</div>
+                        <div class="h5 text-success mb-0">৳{{ "%.0f"|format(total_spent) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorite Items -->
+        {% if favorite_items %}
+        <div class="glass-card mb-4">
+            <h5 class="text-white mb-3">Favorite Dishes</h5>
+            <ul class="list-unstyled mb-0">
+                {% for item_name, count in favorite_items %}
+                <li
+                    class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom border-secondary last-no-border">
+                    <span class="text-light small">{{ item_name }}</span>
+                    <span class="badge bg-secondary rounded-pill">{{ count }}x</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Purchase History -->
+    <div class="col-lg-8">
+        <div class="glass-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-white">Purchase History</h5>
+                <a href="{{ url_for('crm.index') }}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>
+                                <a href="#" class="text-primary text-decoration-none fw-bold"
+                                    onclick="viewOrderDetails({{ order.id }})">
+                                    #{{ order.unique_order_number }}
+                                </a>
+                            </td>
+                            <td><span class="small text-muted">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </td>
+                            <td>
+                                <span class="small text-light">{{ order.items_parsed|length if order.items_parsed else
+                                    'N/A' }} Items</span>
+                            </td>
+                            <td><span class="text-success fw-bold">৳{{ "%.2f"|format(order.total) }}</span></td>
+                            <td>
+                                <span
+                                    class="badge {% if order.status == 'Pending' %}bg-warning{% elif order.status == 'Confirmed' %}bg-info{% elif order.status == 'Completed' %}bg-success{% else %}bg-danger{% endif %} rounded-pill small">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not orders %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">No orders found for this customer.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border-secondary text-light">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white"><i class="bi bi-receipt me-2"></i>Order Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body border-secondary" id="orderModalBody">
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function viewOrderDetails(id) {
+        const modal = new bootstrap.Modal(document.getElementById('orderModal'));
+        const body = document.getElementById('orderModalBody');
+        body.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div></div>';
+        modal.show();
+
+        fetch(`/crm/order/${id}`)
+            .then(res => { if (!res.ok) throw new Error('Order not found'); return res.json(); })
+            .then(data => {
+                let itemsHtml = data.items.map(item => `
+                    <div class="d-flex justify-content-between border-bottom border-secondary py-2">
+                        <span class="text-stylish">${item.name} x ${item.qty}</span>
+                        <span class="text-white fw-bold">৳${(item.price * item.qty).toFixed(2)}</span>
+                    </div>
+                `).join('');
+
+                body.innerHTML = `
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="text-muted small d-block mb-1">Order Status</label>
+                            <span class="badge bg-${data.status === 'Confirmed' ? 'success' : 'primary'} mb-3">${data.status}</span>
+                            
+                            <label class="text-muted small d-block mb-1">Customer Info</label>
+                            <p class="text-white mb-0 fw-bold">${data.customer}</p>
+                            <p class="text-stylish small mb-2">@${data.username}</p>
+                            <p class="text-white mb-3"><i class="bi bi-telephone me-2"></i>${data.phone}</p>
+                            
+                            <label class="text-muted small d-block mb-1">Delivery Address</label>
+                            <p class="text-white small mb-0">${data.address_street}</p>
+                            <p class="text-white small mb-0">${data.address_city}, ${data.address_district || ''}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small d-block mb-1">Items Summary</label>
+                            <div class="bg-black bg-opacity-25 rounded p-3 mb-3">
+                                ${itemsHtml}
+                                <div class="d-flex justify-content-between mt-3 pt-2 border-top border-white border-opacity-25">
+                                    <span class="text-white fw-bold">Grand Total</span>
+                                    <span class="text-primary fw-bold fs-5">৳${data.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <small class="text-muted">Placed on ${data.created_at}</small>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                body.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+            });
+    }
+</script>
+{% endblock %}
+
+{% block head %}
+<style>
+    .customer-avatar-large {
+        position: relative;
+        display: inline-block;
+    }
+
+    .last-no-border:last-child {
+        border-bottom: none !important;
+    }
+
+    .bg-darker {
+        background: rgba(0, 0, 0, 0.3);
+    }
+</style>
+{% endblock %}

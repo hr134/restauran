@@ -1,0 +1,82 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}Sales Report - Manager{% endblock %}
+
+{% block manager_title %}Detailed Sales Report{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="glass-card p-4">
+        <h2 class="mb-4 text-white">📊 Detailed Sales Report</h2>
+
+        <!-- Date Range Filter -->
+        <div class="card mb-4 bg-dark border-secondary">
+            <div class="card-body">
+                <form method="get" class="row align-items-center">
+                    <div class="col-auto">
+                        <label for="days" class="form-label text-muted small m-0 me-2">Time Period:</label>
+                    </div>
+                    <div class="col-auto">
+                        <select name="days" id="days" class="form-select bg-dark text-light border-secondary"
+                            onchange="this.form.submit()">
+                            <option value="7" {% if days==7 %}selected{% endif %}>Last 7 Days</option>
+                            <option value="30" {% if days==30 %}selected{% endif %}>Last 30 Days</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card bg-dark border-secondary h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted small uppercase">Total Revenue</h6>
+                        <h2 class="text-white mb-0">৳{{ "%.2f"|format(total_revenue) }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-dark border-secondary h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted small uppercase">Total Orders</h6>
+                        <h2 class="text-info mb-0">{{ total_orders }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Selling Items -->
+        <div class="card mb-4 bg-dark border-secondary">
+            <div class="card-header border-secondary">
+                <h5 class="mb-0 text-white">Top Selling Items</h5>
+            </div>
+            <div class="card-body px-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Quantity Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in top_items %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.total_quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a href="{{ url_for('analytics.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+# instance/  <-- Commented out to allow DB tracking
+# *.db       <-- Commented out to allow DB tracking
+*.log
+.env
+.vscode/
