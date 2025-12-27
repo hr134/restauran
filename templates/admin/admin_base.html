@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}Admin - Finedine♡𓌉◯𓇋₊˚{% endblock %}</title>
+
+    <link rel="shortcut icon" href="/static/img/mylogo.png">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    {% block head %}{% endblock %}
+</head>
+
+<body class="admin-body">
+    <!-- NOTIFICATION CONTAINER -->
+    <div id="notification-container"></div>
+
+    <!-- Premium Confirm Modal -->
+    <div id="premium-confirm-overlay" class="premium-modal-overlay">
+        <div class="premium-modal">
+            <div id="confirm-icon" class="premium-modal-icon">
+                <i class="bi bi-question-circle"></i>
+            </div>
+            <div id="confirm-title" class="premium-modal-title">Are you sure?</div>
+            <div id="confirm-body" class="premium-modal-body">Do you really want to proceed with this action?</div>
+            <div class="premium-modal-footer">
+                <button id="confirm-cancel-btn" class="premium-modal-btn btn-cancel">Cancel</button>
+                <button id="confirm-ok-btn" class="premium-modal-btn btn-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Admin Panel</h4>
+            </div>
+
+            <ul class="list-unstyled components">
+                <li class="{% if request.endpoint == 'admin.index' %}active{% endif %}">
+                    <a href="{{ url_for('admin.index') }}"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.add_menu' %}active{% endif %}">
+                    <a href="{{ url_for('admin.add_menu') }}"><i class="bi bi-plus-circle"></i> Add Menu Item</a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.inventory' %}active{% endif %}">
+                    <a href="{{ url_for('admin.inventory') }}"
+                        class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-box"></i> Inventory</span>
+                        <span class="badge bg-danger rounded-pill sidebar-badge" id="badge-inventory"
+                            style="display:none;"></span>
+                    </a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.orders' %}active{% endif %}">
+                    <a href="{{ url_for('admin.orders') }}" class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-cart-check"></i> Orders</span>
+                        <span class="badge bg-danger rounded-pill sidebar-badge" id="badge-orders"
+                            style="display:none;"></span>
+                    </a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.reservations' %}active{% endif %}">
+                    <a href="{{ url_for('admin.reservations') }}"
+                        class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-calendar-check"></i> Reservations</span>
+                        <span class="badge bg-danger rounded-pill sidebar-badge" id="badge-reservations"
+                            style="display:none;"></span>
+                    </a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.sales_report' %}active{% endif %}">
+                    <a href="{{ url_for('admin.sales_report') }}"><i class="bi bi-graph-up"></i> Sales Report</a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.users' %}active{% endif %}">
+                    <a href="{{ url_for('admin.users') }}"><i class="bi bi-people"></i> Users</a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.admins' %}active{% endif %}">
+                    <a href="{{ url_for('admin.admins') }}"><i class="bi bi-shield-lock"></i> Admins</a>
+                </li>
+                <li class="{% if request.endpoint == 'admin.employee_requests' %}active{% endif %}">
+                    <a href="{{ url_for('admin.employee_requests') }}"
+                        class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-person-check"></i> Employee Requests</span>
+                        <span class="badge bg-danger rounded-pill sidebar-badge" id="badge-requests"
+                            style="display:none;"></span>
+                    </a>
+                </li>
+
+                <hr class="mx-3 border-secondary opacity-50">
+
+                <li>
+                    <a href="#managementCollapse" data-bs-toggle="collapse"
+                        class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-gear-fill me-2"></i> Management / ERP</span>
+                        <i class="bi bi-chevron-down small"></i>
+                    </a>
+                    <div class="collapse {% if request.endpoint in ['crm.index', 'employees.index', 'analytics.dashboard', 'ai_insights.index', 'admin.shifts'] %}show{% endif %}"
+                        id="managementCollapse">
+                        <ul class="list-unstyled ps-3">
+                            <li class="{% if request.endpoint == 'crm.index' %}active{% endif %}">
+                                <a href="{{ url_for('crm.index') }}"><i class="bi bi-person-lines-fill"></i> CRM
+                                    (Customers)</a>
+                            </li>
+                            <li class="{% if request.endpoint == 'employees.index' %}active{% endif %}">
+                                <a href="{{ url_for('employees.index') }}"><i class="bi bi-people-fill"></i>
+                                    Employees</a>
+                            </li>
+                            <li class="{% if request.endpoint == 'analytics.dashboard' %}active{% endif %}">
+                                <a href="{{ url_for('analytics.dashboard') }}"><i class="bi bi-graph-up-arrow"></i>
+                                    Sales Analytics</a>
+                            </li>
+                            <li class="{% if request.endpoint == 'ai_insights.index' %}active{% endif %}">
+                                <a href="{{ url_for('ai_insights.index') }}"><i class="bi bi-robot"></i> AI Insights</a>
+                            </li>
+                            <li class="{% if request.endpoint == 'admin.shifts' %}active{% endif %}">
+                                <a href="{{ url_for('admin.shifts') }}"><i class="bi bi-clock-history"></i> Staff
+                                    Shifts</a>
+                            </li>
+                            <li class="{% if request.endpoint == 'employees.attendance' %}active{% endif %}">
+                                <a href="{{ url_for('employees.attendance') }}"><i class="bi bi-calendar-check"></i>
+                                    Attendance</a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <hr class="mx-3 border-secondary">
+                <li>
+                    <a href="{{ url_for('main.index') }}"><i class="bi bi-house"></i> View Site</a>
+                </li>
+                <li>
+                    <a href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-dark sticky-top mb-4">
+                <div class="container-fluid p-0">
+                    <button type="button" id="sidebarCollapse" class="btn btn-outline-light me-3 d-lg-none">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h4 class="mb-0">{% block admin_title %}{% endblock %}</h4>
+
+                    <div class="ms-auto d-flex align-items-center">
+                        <span class="text-muted small me-3"><i class="bi bi-person-circle me-1"></i> Admin</span>
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
+                    </div>
+                </div>
+            </nav>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            <div id="flashed-messages" style="display: none;">
+                {% for category, message in messages %}
+                <div class="flash-msg" data-category="{{ category }}" data-message="{{ message }}"></div>
+                {% endfor %}
+            </div>
+            {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.querySelectorAll('.flash-msg').forEach(el => {
+                        const category = el.dataset.category;
+                        const message = el.dataset.message;
+                        const type = category === 'success' ? 'success' : (category === 'error' || category === 'danger' ? 'danger' : (category === 'warning' ? 'warning' : 'primary'));
+                        showNotification(message, type);
+                    });
+                });
+            </script>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebarCollapse = document.getElementById('sidebarCollapse');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+
+            if (sidebarCollapse) {
+                sidebarCollapse.addEventListener('click', function () {
+                    sidebar.classList.toggle('active');
+                    content.classList.toggle('active');
+                });
+            }
+
+            // Theme Toggle Logic - REMOVED
+        });
+
+        // Premium Notification System
+        function showNotification(message, type = 'primary') {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
+            toast.className = `custom-notification ${type}`;
+
+            const icon = type === 'success' ? 'bi-check-circle-fill' :
+                type === 'danger' ? 'bi-exclamation-triangle-fill' :
+                    type === 'warning' ? 'bi-exclamation-circle-fill' : 'bi-info-circle-fill';
+
+            toast.innerHTML = `<i class="bi ${icon}"></i>`;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'notif-content';
+            contentDiv.textContent = message;
+            toast.appendChild(contentDiv);
+
+            // Sequential timing: Email/Notification messages come 400ms late
+            const isEmailNotif = message.toLowerCase().includes('email') || message.toLowerCase().includes('notification');
+            const delay = isEmailNotif ? 400 : 0;
+
+            setTimeout(() => {
+                container.appendChild(toast);
+
+                // Auto-remove after 4 seconds
+                setTimeout(() => {
+                    toast.classList.add('hide');
+                    setTimeout(() => toast.remove(), 500);
+                }, 4000);
+            }, delay);
+        }
+
+        async function handlePremiumConfirm(event, message, target, title = "Confirm Action", icon = "bi-exclamation-triangle", callback = null) {
+            if (event) event.preventDefault();
+            const targetUrl = target.href || target.getAttribute('href');
+            const confirmed = await showConfirm(message, title, icon);
+            if (confirmed) {
+                if (callback && typeof callback === 'function') {
+                    callback(targetUrl, target);
+                } else if (target.dataset.ajax === 'true') {
+                    // Default AJAX handler
+                    fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                showNotification(data.message, 'success');
+                                if (target.dataset.removeRow === 'true') {
+                                    const row = target.closest('tr');
+                                    row.classList.add('fade-out');
+                                    setTimeout(() => row.remove(), 500);
+                                }
+                            } else {
+                                showNotification(data.message, 'danger');
+                            }
+                        })
+                        .catch(err => showNotification('Action failed', 'danger'));
+                } else {
+                    window.location.href = targetUrl;
+                }
+            }
+        }
+
+        // Standardized handler for database + email notifications
+        function handleAjaxResponse(data, callback) {
+            const actionMsg = data.message || 'Action completed successfully';
+            showNotification(actionMsg, data.success ? 'success' : 'danger');
+
+            if (data.success && data.email) {
+                let emailMsg = '';
+                let emailType = 'info';
+
+                if (data.email_status === 'pending') {
+                    emailMsg = `Notification queued for ${data.email}`;
+                } else if (data.email_status === true) {
+                    emailMsg = `Notification sent to ${data.email}`;
+                    emailType = 'success';
+                } else if (data.email_status === false) {
+                    emailMsg = `Email couldn't be sent to ${data.email}`;
+                    emailType = 'warning';
+                }
+
+                if (emailMsg) {
+                    setTimeout(() => showNotification(emailMsg, emailType), 1500);
+                }
+            }
+
+            if (data.success && typeof callback === 'function') {
+                callback(data);
+            }
+        }
+
+        // Lightweight polling mechanism
+        function startPolling(url, interval, callback) {
+            setInterval(() => {
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(res => res.json())
+                    .then(data => callback(data))
+                    .catch(err => console.error('Polling error:', err));
+            }, interval);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const updateBadges = (data) => {
+                // Helper to update individual badge
+                const update = (id, count) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (count > 0) {
+                            el.textContent = count;
+                            el.style.display = 'inline-block';
+                        } else {
+                            el.style.display = 'none';
+                        }
+                    }
+                };
+
+                update('badge-inventory', data.out_of_stock_count);
+                update('badge-orders', data.orders_count);
+                update('badge-reservations', data.reservations_count);
+                update('badge-requests', data.employee_requests_count);
+            };
+
+            // Initial fetch
+            fetch('/api/dashboard/stats')
+                .then(res => res.json())
+                .then(updateBadges)
+                .catch(console.error);
+
+            // Poll every 10 seconds
+            startPolling('/api/dashboard/stats', 10000, updateBadges);
+        });
+
+        async function showConfirm(message, title = "Confirm Action", iconClass = "bi-exclamation-triangle") {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('premium-confirm-overlay');
+                const titleEl = document.getElementById('confirm-title');
+                const bodyEl = document.getElementById('confirm-body');
+                const iconEl = document.getElementById('confirm-icon');
+                const okBtn = document.getElementById('confirm-ok-btn');
+                const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+                titleEl.textContent = title;
+                bodyEl.textContent = message;
+                iconEl.innerHTML = `<i class="bi ${iconClass}"></i>`;
+
+                overlay.classList.add('show');
+
+                const cleanup = (result) => {
+                    overlay.classList.remove('show');
+                    okBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    resolve(result);
+                };
+
+                okBtn.onclick = () => cleanup(true);
+                cancelBtn.onclick = () => cleanup(false);
+            });
+        }
+
+        // Override Alert
+        window.alert = (msg) => showNotification(msg, 'primary');
+
+        // Note: For admin actions we will call showConfirm explicitly in the templates
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

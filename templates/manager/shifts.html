@@ -1,0 +1,53 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}Shift Schedule - Manager{% endblock %}
+
+{% block manager_title %}Staff Shift Schedule{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="glass-card p-4">
+        <h2 class="mb-4 text-white">📅 Staff Shift Schedule</h2>
+
+        <p class="text-muted mb-4">View scheduled shifts for your team.</p>
+
+        <!-- Shift List (Full Width, View Only) -->
+        <div class="card bg-dark-pro border-secondary">
+            <div class="card-header border-secondary">
+                <h5 class="mb-0 text-white">Upcoming Shifts</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Staff</th>
+                                <th>Role</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shift in shifts %}
+                            <tr>
+                                <td>{{ shift.staff.full_name or shift.staff.username }}</td>
+                                <td><span class="badge bg-secondary">{{ shift.staff.role }}</span></td>
+                                <td>{{ shift.shift_start.strftime('%d %b %H:%M') }}</td>
+                                <td>{{ shift.shift_end.strftime('%d %b %H:%M') }}</td>
+                                <td>{{ ((shift.shift_end - shift.shift_start).total_seconds() / 3600)|round(1) }} hrs
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No upcoming shifts scheduled.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

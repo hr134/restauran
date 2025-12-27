@@ -1,0 +1,99 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Shift Management - Admin{% endblock %}
+
+{% block admin_title %}Staff Shift Management{% endblock %}
+
+{% block content %}
+<div class="glass-card p-4">
+    <h2 class="mb-4 text-white">🕰️ Staff Shift Management</h2>
+
+    <div class="row">
+        <!-- Add Shift Form -->
+        <div class="col-md-4 mb-4">
+            <div class="card bg-dark-pro border-secondary h-100">
+                <div class="card-header border-secondary">
+                    <h5 class="mb-0 text-white">Assign New Shift</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin.add_shift') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Staff Member</label>
+                            <select name="user_id" class="form-select admin-input" required>
+                                <option value="" selected disabled>Select Employee</option>
+                                {% for user in staff %}
+                                <option value="{{ user.id }}">{{ user.full_name or user.username }} ({{ user.role }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Start Time</label>
+                            <input type="datetime-local" name="shift_start" class="form-control admin-input" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">End Time</label>
+                            <input type="datetime-local" name="shift_end" class="form-control admin-input" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Assign Shift</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shift List -->
+        <div class="col-md-8">
+            <div class="card bg-dark-pro border-secondary h-100">
+                <div class="card-header border-secondary">
+                    <h5 class="mb-0 text-white">Upcoming Shifts</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Staff</th>
+                                    <th>Role</th>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in shifts %}
+                                <tr>
+                                    <td>{{ shift.staff.full_name or shift.staff.username }}</td>
+                                    <td><span class="badge bg-secondary">{{ shift.staff.role }}</span></td>
+                                    <td>{{ shift.shift_start.strftime('%d %b %H:%M') }}</td>
+                                    <td>{{ shift.shift_end.strftime('%d %b %H:%M') }}</td>
+                                    <td>{{ ((shift.shift_end - shift.shift_start).total_seconds() / 3600)|round(1) }}
+                                        hrs</td>
+                                    <td>
+                                        <a href="{{ url_for('admin.delete_shift', shift_id=shift.id) }}"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Delete this shift?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">No upcoming shifts scheduled.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

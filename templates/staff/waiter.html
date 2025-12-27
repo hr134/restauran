@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}Waiter Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card p-4 shadow-sm border-0" style="background: var(--card-bg);">
+            <h2 class="mb-4 text-info"><i class="bi bi-person-badge me-2"></i>Waiter Dashboard</h2>
+
+            <div class="row">
+                <!-- Active Orders Section -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0" style="background: var(--card-bg);">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-cup-hot me-2"></i>Ready for Serving</h5>
+                        </div>
+                        <div id="ready-orders-container" class="card-body">
+                            {% set ready_orders = orders | selectattr('status', 'equalto', 'Ready') | list %}
+                            {% for order in ready_orders %}
+                            <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center ready-order-item"
+                                data-order-id="{{ order.id }}" style="background: var(--bg-hover);">
+                                <div>
+                                    <h6 class="mb-1">Order #{{ order.unique_order_number }}</h6>
+                                    <small class="text-muted">Name: {{ order.user.full_name }}</small>
+                                    <small class="text-muted">| Number: {{ order.phone }}</small>
+                                </div>
+                                <div class="order-actions">
+                                    <button onclick="updateOrderStatus({{ order.id }}, 'Delivered')"
+                                        class="btn btn-sm btn-success">Served</button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if not ready_orders %}
+                            <p class="text-muted no-orders-msg">No orders ready for serving.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reservations Section -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0" style="background: var(--card-bg);">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Reservations</h5>
+                        </div>
+                        <div id="reservations-container" class="card-body">
+                            {% for res in reservations %}
+                            <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center reservation-item"
+                                data-res-id="{{ res.id }}" style="background: var(--bg-hover);">
+                                <div>
+                                    <h6 class="mb-1">Table {{ res.table_no }} - {{ res.guests }} Guests</h6>
+                                    <small class="text-muted">{{ res.date }} | {{ res.time }} - <span
+                                            class="res-status">{{ res.status
+                                            }}</span></small>
+                                </div>
+                                <div class="res-actions">
+                                    {% if res.status == 'Confirmed' %}
+                                    <button onclick="updateResStatus({{ res.id }}, 'Arrived')"
+                                        class="btn btn-sm btn-outline-success">Arrived</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if not reservations %}
+                            <p class="text-muted no-res-msg">No reservations scheduled.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateOrderStatus(orderId, status) {
+        const formData = new FormData();
+        formData.append('status', status);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+
+        fetch(`/staff/order/status/${orderId}`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                handleAjaxResponse(data, () => refreshDashboard());
+            })
+            .catch(err => showNotification('Update failed', 'danger'));
+    }
+
+    function updateResStatus(resId, status) {
+        const formData = new FormData();
+        formData.append('status', status);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+
+        fetch(`/staff/reservation/status/${resId}`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                handleAjaxResponse(data, () => refreshDashboard());
+            })
+            .catch(err => showNotification('Update failed', 'danger'));
+    }
+
+    function refreshDashboard(data = null) {
+        if (data) {
+            updateDashboardUI(data);
+            return;
+        }
+        fetch('{{ url_for("staff.waiter_data") }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(res => res.json())
+            .then(data => updateDashboardUI(data));
+    }
+
+    function updateDashboardUI(data) {
+        // Update Reservations
+        const resContainer = document.getElementById('reservations-container');
+        if (!data.reservations || data.reservations.length === 0) {
+            resContainer.innerHTML = '<p class="text-muted no-res-msg">No reservations scheduled.</p>';
+        } else {
+            let resHtml = '';
+            data.reservations.forEach(res => {
+                const actionHtml = res.status === 'Confirmed' ?
+                    `<button onclick="updateResStatus(${res.id}, 'Arrived')" class="btn btn-sm btn-outline-success">Arrived</button>` : '';
+                resHtml += `
+                    <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center reservation-item" data-res-id="${res.id}" style="background: var(--bg-hover);">
+                        <div>
+                            <h6 class="mb-1">Table ${res.table_no} - ${res.guests} Guests</h6>
+                            <small class="text-muted">${res.date} | ${res.time} - <span class="res-status">${res.status}</span></small>
+                        </div>
+                        <div class="res-actions">${actionHtml}</div>
+                    </div>
+                `;
+            });
+            resContainer.innerHTML = resHtml;
+        }
+
+        // Update Ready Orders
+        const ordersContainer = document.getElementById('ready-orders-container');
+        if (!data.orders || data.orders.length === 0) {
+            ordersContainer.innerHTML = '<p class="text-muted no-orders-msg">No orders ready for serving.</p>';
+        } else {
+            let ordersHtml = '';
+            data.orders.forEach(order => {
+                ordersHtml += `
+                    <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center ready-order-item" data-order-id="${order.id}" style="background: var(--bg-hover);">
+                        <div>
+                            <h6 class="mb-1">Order #${order.unique_order_number}</h6>
+                            <small class="text-muted">Name: ${order.full_name}</small>
+                            <small class="text-muted">| Number: ${order.phone}</small>
+                        </div>
+                        <div class="order-actions">
+                            <button onclick="updateOrderStatus(${order.id}, 'Delivered')" class="btn btn-sm btn-success">Served</button>
+                        </div>
+                    </div>
+                `;
+            });
+            ordersContainer.innerHTML = ordersHtml;
+        }
+    }
+
+    // Start polling every 5 seconds for faster real-time updates
+    startPolling('{{ url_for("staff.waiter_data") }}', 5000, (data) => {
+        refreshDashboard(data);
+    });
+</script>
+{% endblock %}

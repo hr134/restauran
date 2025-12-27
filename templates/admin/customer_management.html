@@ -1,0 +1,95 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Customer Management - Admin{% endblock %}
+
+{% block admin_title %}CRM: Customer Insights{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="glass-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-white"><i class="bi bi-people me-2 text-primary"></i>Customer Database</h5>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('crm.export_customers') }}" target="_blank" class="btn btn-success btn-sm">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Contact Info</th>
+                            <th>Stats</th>
+                            <th>Revenue</th>
+                            <th>Tier</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in customer_stats %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-3">
+                                        {{ stat.customer.username[0]|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="text-white fw-bold">@{{ stat.customer.username }}</div>
+                                        <div class="small text-muted">{{ stat.customer.full_name or 'No Name' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-light mb-1"><i class="bi bi-envelope me-1 text-primary"></i>{{
+                                    stat.customer.email }}</div>
+                                <div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ stat.customer.phone
+                                    or 'N/A' }}</div>
+                            </td>
+                            <td>
+                                <div class="small text-white">Orders: <span class="fw-bold">{{ stat.total_orders
+                                        }}</span></div>
+                                <div class="small text-muted">Avg: ৳{{ "%.0f"|format(stat.avg_order_value) }}</div>
+                            </td>
+                            <td>
+                                <div class="text-success fw-bold">৳{{ "%.0f"|format(stat.total_spent) }}</div>
+                            </td>
+                            <td>
+                                <span
+                                    class="badge {% if stat.tier == 'VIP' %}bg-danger{% elif stat.tier == 'Gold' %}bg-warning{% elif stat.tier == 'Silver' %}bg-secondary{% else %}bg-info{% endif %} rounded-pill small">
+                                    {{ stat.tier }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('crm.view_customer', id=stat.customer.id) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-search"></i> Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: var(--manager-accent, #3a86ff);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+</style>
+{% endblock %}

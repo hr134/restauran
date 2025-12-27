@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Chef Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card p-4 shadow-sm border-0" style="background: var(--card-bg);">
+            <h2 class="mb-4 text-primary"><i class="bi bi-fire me-2"></i>Chef Dashboard</h2>
+
+            <div id="orders-container" class="row">
+                {% for order in orders %}
+                <div class="col-md-6 col-lg-4 mb-4 order-card" data-order-id="{{ order.id }}">
+                    <div class="card h-100 border-{% if order.status == 'Preparing' %}warning{% else %}primary{% endif %} shadow-sm"
+                        style="background: var(--card-bg);">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Order #{{ order.unique_order_number }}</span>
+                            <span
+                                class="badge order-status-badge {% if order.status == 'Preparing' %}bg-warning text-dark{% else %}bg-primary{% endif %}">{{
+                                order.status }}</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush mb-3">
+                                {% for item in order.items_parsed %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center"
+                                    style="background: transparent; color: var(--text-main);">
+                                    {{ item.name }}
+                                    <span class="badge bg-secondary rounded-pill">x{{ item.qty }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            <div class="small text-muted mb-3">
+                                <i class="bi bi-clock me-1"></i> {{ order.created_at.strftime('%H:%M') }}
+                            </div>
+
+                            <div class="status-actions">
+                                {% if order.status in ['Placed', 'Confirmed', 'Paid'] %}
+                                <button onclick="updateStatus({{ order.id }}, 'Preparing')"
+                                    class="btn btn-warning w-100">Start Preparing</button>
+                                {% elif order.status == 'Preparing' %}
+                                <button onclick="updateStatus({{ order.id }}, 'Ready')"
+                                    class="btn btn-success w-100">Mark Ready</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not orders %}
+                <div id="no-orders-msg" class="col-12 text-center py-5">
+                    <i class="bi bi-check2-circle text-success" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">No active orders. All clear!</h4>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateStatus(orderId, status) {
+        const formData = new FormData();
+        formData.append('status', status);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+
+        fetch(`/staff/order/status/${orderId}`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                handleAjaxResponse(data, () => {
+                    // Status will be updated via polling shortly, 
+                    // but we can also update locally for instant feedback
+                    refreshDashboard();
+                });
+            })
+            .catch(err => showNotification('Update failed', 'danger'));
+    }
+
+    function refreshDashboard(data = null) {
+        if (data) {
+            updateDashboardUI(data);
+            return;
+        }
+        // Fallback for manual call if needed (though startPolling covers it)
+        fetch('{{ url_for("staff.chef_data") }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(res => res.json())
+            .then(data => updateDashboardUI(data));
+    }
+
+    function updateDashboardUI(data) {
+        const container = document.getElementById('orders-container');
+        if (!data.orders || data.orders.length === 0) {
+            container.innerHTML = `
+                <div id="no-orders-msg" class="col-12 text-center py-5">
+                    <i class="bi bi-check2-circle text-success" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">No active orders. All clear!</h4>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        data.orders.forEach(order => {
+            const borderClass = order.status === 'Preparing' ? 'warning' : 'primary';
+            const badgeClass = order.status === 'Preparing' ? 'bg-warning text-dark' : 'bg-primary';
+
+            let itemsHtml = '';
+            order.items.forEach(item => {
+                itemsHtml += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center" style="background: transparent; color: var(--text-main);">
+                        ${item.name}
+                        <span class="badge bg-secondary rounded-pill">x${item.qty}</span>
+                    </li>
+                `;
+            });
+
+            let actionHtml = '';
+            if (['Placed', 'Confirmed', 'Paid'].includes(order.status)) {
+                actionHtml = `<button onclick="updateStatus(${order.id}, 'Preparing')" class="btn btn-warning w-100">Start Preparing</button>`;
+            } else if (order.status === 'Preparing') {
+                actionHtml = `<button onclick="updateStatus(${order.id}, 'Ready')" class="btn btn-success w-100">Mark Ready</button>`;
+            }
+
+            html += `
+                <div class="col-md-6 col-lg-4 mb-4 order-card" data-order-id="${order.id}">
+                    <div class="card h-100 border-${borderClass} shadow-sm" style="background: var(--card-bg);">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Order #${order.unique_order_number}</span>
+                            <span class="badge order-status-badge ${badgeClass}">${order.status}</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush mb-3">${itemsHtml}</ul>
+                            <div class="small text-muted mb-3">
+                                <i class="bi bi-clock me-1"></i> ${order.created_at}
+                            </div>
+                            <div class="status-actions">${actionHtml}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    // Start polling every 5 seconds for faster real-time updates
+    startPolling('{{ url_for("staff.chef_data") }}', 5000, (data) => {
+        refreshDashboard(data);
+    });
+</script>
+{% endblock %}

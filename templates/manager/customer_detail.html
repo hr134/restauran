@@ -1,0 +1,177 @@
+{% extends 'manager/manager_base.html' %}
+
+{% block title %}Customer Analysis - {{ customer.username }}{% endblock %}
+
+{% block manager_title %}Behavioral Analysis: @{{ customer.username }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <!-- Profile Overview -->
+        <div class="glass-card mb-4 text-center">
+            <div class="mb-3">
+                <img src="{{ customer.profile_image and url_for('static', filename='uploads/' ~ customer.profile_image) or url_for('static', filename='img/placeholder.jpg') }}"
+                    class="rounded-circle border border-info p-1" width="100" height="100" style="object-fit:cover;">
+            </div>
+            <h4 class="text-white mb-1">{{ customer.full_name or customer.username }}</h4>
+            <div class="badge bg-info mb-3">
+                Loyalty: {% if total_spent > 10000 %}VIP{% elif total_spent > 5000 %}Gold{% elif total_spent > 1000
+                %}Silver{% else %}Regular{% endif %}
+            </div>
+
+            <div class="text-start mt-3 opacity-75 small">
+                <div class="mb-1"><i class="bi bi-envelope me-2"></i>{{ customer.email }}</div>
+                <div class="mb-1"><i class="bi bi-telephone me-2"></i>{{ customer.phone or 'No Phone' }}</div>
+                <div class="mb-0"><i class="bi bi-calendar3 me-2"></i>Joined {{ customer.created_at.strftime('%b %Y') if
+                    customer.created_at else 'N/A' }}</div>
+            </div>
+        </div>
+
+        <!-- Conversion Stats -->
+        <div class="glass-card mb-4">
+            <h6 class="text-info mb-3">Purchase Behavior</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted small">Total Orders</span>
+                <span class="text-white fw-bold">{{ total_orders }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted small">Customer Lifetime Value</span>
+                <span class="text-success fw-bold">৳{{ "%.2f"|format(total_spent) }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted small">Average Order Value</span>
+                <span class="text-white fw-bold">৳{{ "%.2f"|format(avg_order_value) }}</span>
+            </div>
+        </div>
+
+        <!-- Preferences -->
+        {% if favorite_items %}
+        <div class="glass-card">
+            <h6 class="text-info mb-3">Strongest Preferences</h6>
+            {% for item_name, count in favorite_items %}
+            <div class="mb-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-light">{{ item_name }}</span>
+                    <span class="text-muted">{{ count }} orders</span>
+                </div>
+                <div class="progress" style="height: 4px; background: rgba(255,255,255,0.05);">
+                    <div class="progress-bar bg-info" style="width: {{ (count / total_orders * 100)|round }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+        <div class="glass-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-white">Full Purchase History</h5>
+                <a href="{{ url_for('crm.index') }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-arrow-left"></i> Hub
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Date</th>
+                            <th>Sum</th>
+                            <th>Status</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td class="text-white fw-bold">#{{ order.unique_order_number }}</td>
+                            <td><span class="small text-muted">{{ order.created_at.strftime('%d %b, %y') }}</span></td>
+                            <td class="text-success">৳{{ "%.2f"|format(order.total) }}</td>
+                            <td>
+                                <span
+                                    class="badge {% if order.status == 'Completed' %}bg-success{% else %}bg-secondary{% endif %} rounded-pill"
+                                    style="font-size: 0.65rem;">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-light border-0"
+                                    onclick="viewOrderDetails({{ order.id }})">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h6 class="modal-title text-white">Order Breakdown</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderModalBody"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function viewOrderDetails(id) {
+        const modal = new bootstrap.Modal(document.getElementById('orderModal'));
+        const body = document.getElementById('orderModalBody');
+        body.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-info" role="status"></div></div>';
+        modal.show();
+
+        fetch(`/crm/order/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                let itemsHtml = data.items.map(item => `
+                    <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-50">
+                        <span class="text-light small">${item.name} x${item.qty}</span>
+                        <span class="text-white small fw-bold">৳${(item.price * item.qty).toFixed(0)}</span>
+                    </div>
+                `).join('');
+
+                body.innerHTML = `
+                    <div class="p-2">
+                        <div class="mb-3 text-center">
+                            <h5 class="text-success mb-0">৳${data.total.toFixed(2)}</h5>
+                            <small class="text-muted">Order #${data.unique_order_number}</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="text-muted extra-small text-uppercase mb-2">Order Content</label>
+                            ${itemsHtml}
+                        </div>
+                        <div class="row g-2 text-start">
+                            <div class="col-6">
+                                <label class="text-muted extra-small text-uppercase mb-1">Status</label>
+                                <div class="text-white small">${data.status}</div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <label class="text-muted extra-small text-uppercase mb-1">Date</label>
+                                <div class="text-white small">${data.created_at}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+    }
+</script>
+<style>
+    .extra-small {
+        font-size: 0.6rem;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
